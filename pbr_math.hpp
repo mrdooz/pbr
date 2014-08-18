@@ -134,6 +134,15 @@ namespace pbr
   };
 
   //---------------------------------------------------------------------------
+  struct Sphere
+  {
+    Sphere() {}
+    Sphere(const Vector3& c, float r) : c(c), r(r) {}
+    Vector3 c;
+    float r;
+  };
+
+  //---------------------------------------------------------------------------
   void CreateCoordinateSystem(const Vector3& v1, Vector3* v2, Vector3* v3);
 
   // return n flipped if it doesn't lie in the same hemispher are v

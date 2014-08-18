@@ -6,14 +6,18 @@ using namespace pbr;
 float* backbuffer;
 Vector2u windowSize;
 
-Camera camera;
+vector<Sphere> scene;
 
 void Init()
 {
   backbuffer = (float*)malloc(windowSize.x * windowSize.y * 4 * sizeof(float));
 
-  camera.frame = Frame(Vector3(1,0,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(0,0,0));
-  camera.fov = DegToRad(30);
+  for (u32 i = 0; i < 10; ++i)
+  {
+    float angle = i * 2 * Pi / 10;
+    scene.push_back(Sphere(Vector3(10 * cos(angle), 0, 30 + 10 * sin(angle)), 2));
+  }
+
 }
 
 void Close()
@@ -21,7 +25,32 @@ void Close()
   free(backbuffer);
 }
 
-Color Trace(const Ray& r)
+float Intersect(const Ray& r, const Sphere& s)
+{
+  // sphere intersection
+  float a = Dot(r.d, r.d);
+  float b = 2 * Dot(r.o - s.c, r.d);
+  float c = Dot(r.o - s.c, r.o - s.c) - Sq(s.r);
+
+  float disc = Sq(b) - 4 * a * c;
+  if (disc < 0)
+    return -1;
+
+  disc = sqrtf(disc);
+  float t0 = (-b - disc) / 2;
+  if (t0 > 0)
+    return t0;
+
+  float t1 = (-b + disc) / 2;
+  return t1;
+}
+
+Vector3 Normal(const Vector3& p, const Sphere& s)
+{
+  return Normalize(p - s.c);
+}
+
+Color Trace2(const Ray& r)
 {
   Color res(0.1f,0.1f,0.1f);
 
@@ -45,6 +74,31 @@ Color Trace(const Ray& r)
     return Color(1,1,1);
 
   return res;
+}
+
+Color Trace(const Ray& r)
+{
+  float tMin = 1e20;
+  const Sphere* hit = nullptr;
+
+  for (const Sphere& s : scene)
+  {
+    float t = Intersect(r, s);
+    if (t > 0 && t < tMin)
+    {
+      hit = &s;
+      tMin = t;
+    }
+  }
+
+  if (!hit)
+    return Color(0.1f, 0.1f, 0.1f);
+
+  // point on sphere
+  Vector3 p = r.o + tMin * r.d;
+  Vector3 n = Normal(p, *hit);
+  float d = Dot(n, -r.d);
+  return Color(d, d, d);
 }
 
 void Render(const Camera& cam)
@@ -86,7 +140,7 @@ void Render(const Camera& cam)
 
 }
 
-void CopyToWindow(Texture* texture)
+void CopyToWindow(sf::Texture* texture)
 {
 
   vector<sf::Color> buf(windowSize.x * windowSize.y);
@@ -137,8 +191,8 @@ int main(int argc, char** argv)
 
   Camera cam;
   cam.fov = DegToRad(60);
-  cam.dist = 1;
-  cam.frame = Frame(Vector3(1,0,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(0,0,0));
+  cam.dist = 10;
+  cam.frame = Frame(Vector3(1,0,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(0,10,-30));
 
   while (!done)
   {
