@@ -1,3 +1,6 @@
+.idea/*
+CMakeScripts/*
+pbr.xcodeproj/*
 Debug/
 Release/
 Distribution/

@@ -4,6 +4,22 @@
 
 namespace pbr
 {
+  // Note, uses left-handed coordinate system
+
+  const float Pi = 3.14159265359f;
+
+  //---------------------------------------------------------------------------
+  inline float DegToRad(float deg)
+  {
+    return deg / 180.0f * Pi;
+  }
+
+  //---------------------------------------------------------------------------
+  inline float RadToDeg(float rad)
+  {
+    return rad / Pi * 180.0f;
+  }
+
   //---------------------------------------------------------------------------
   struct Vector3
   {
@@ -74,6 +90,11 @@ namespace pbr
       );
   }
 
+  inline float Sq(float x)
+  {
+    return x * x;
+  }
+
   inline Vector3 Normalize(const Vector3& v) { return v / v.Length(); }
   //---------------------------------------------------------------------------
   struct Ray
@@ -84,6 +105,32 @@ namespace pbr
     float minT, maxT;
     float time;
     int depth;
+  };
+
+  //---------------------------------------------------------------------------
+  struct Frame
+  {
+    Frame() {}
+    Frame(const Vector3& r, const Vector3& u, const Vector3& d, const Vector3& o) : right(r), up(u), dir(d), origin(o) {}
+    Vector3 right, up, dir;
+    Vector3 origin;
+  };
+
+  //---------------------------------------------------------------------------
+  struct Camera
+  {
+    Frame frame;
+    float fov;
+    // distance from eye pos to image plane
+    float dist;
+  };
+
+  //---------------------------------------------------------------------------
+  struct Color
+  {
+    Color() {}
+    Color(float r, float g, float b, float a = 1) : r(r), g(g), b(b), a(a) {}
+    float r, g, b, a;
   };
 
   //---------------------------------------------------------------------------
