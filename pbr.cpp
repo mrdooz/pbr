@@ -6,7 +6,10 @@ using namespace pbr;
 float* backbuffer;
 Vector2u windowSize;
 
-vector<Sphere> scene;
+vector<Sphere> spheres;
+vector<Plane> planes;
+
+int MAX_DEPTH = 3;
 
 void Init()
 {
@@ -15,14 +18,34 @@ void Init()
   for (u32 i = 0; i < 10; ++i)
   {
     float angle = i * 2 * Pi / 10;
-    scene.push_back(Sphere(Vector3(10 * cos(angle), 0, 30 + 10 * sin(angle)), 2));
+    spheres.push_back(Sphere(Vector3(10 * cos(angle), 0, 30 + 10 * sin(angle)), 2));
+    spheres.back().material.diffuse = Color(0.1f, 0.2f, 0.4f);
   }
+
+  Sphere center(Vector3(0, 0, 30), 5);
+  center.material.emissive = Color(1, 1, 1);
+  spheres.push_back(center);
+
+  Plane plane(Vector3(0,1,0), 0);
+  plane.material.diffuse = Color(0.5f, 0.5f, 0.5f);
+  planes.push_back(plane);
 
 }
 
 void Close()
 {
   free(backbuffer);
+}
+
+float Intersect(const Ray& r, const Plane& p)
+{
+  float vd = Dot(p.n, r.d);
+  if (vd >= 0)
+    return -1;
+
+  float v0 = -(Dot(p.n, r.o) + p.d);
+
+  return v0 / vd;
 }
 
 float Intersect(const Ray& r, const Sphere& s)
@@ -45,60 +68,61 @@ float Intersect(const Ray& r, const Sphere& s)
   return t1;
 }
 
-Vector3 Normal(const Vector3& p, const Sphere& s)
+Vector3 Normal(const Vector3& v, const Sphere& s)
 {
-  return Normalize(p - s.c);
+  return Normalize(v - s.c);
 }
 
-Color Trace2(const Ray& r)
+Vector3 Normal(const Vector3& v, const Plane& p)
 {
-  Color res(0.1f,0.1f,0.1f);
-
-  Vector3 center(-5, 0, 20);
-  float radius = 2;
-
-  // sphere intersection
-  float a = Dot(r.d, r.d);
-  float b = 2 * Dot(r.o - center, r.d);
-  float c = Dot(r.o - center, r.o - center) - Sq(radius);
-
-  float disc = Sq(b) - 4 * a * c;
-  if (disc < 0)
-    return res;
-
-  disc = sqrtf(disc);
-  float t0 = (-b - disc) / 2;
-  float t1 = (-b + disc) / 2;
-
-  if (max(t0, t1) > 0)
-    return Color(1,1,1);
-
-  return res;
+  return p.n;
 }
 
-Color Trace(const Ray& r)
+Color Trace(const Ray& r, int depth)
 {
   float tMin = 1e20;
-  const Sphere* hit = nullptr;
+  const Sphere* sphere = nullptr;
+  const Plane* plane = nullptr;
 
-  for (const Sphere& s : scene)
+  for (const Sphere& s : spheres)
   {
     float t = Intersect(r, s);
     if (t > 0 && t < tMin)
     {
-      hit = &s;
+      sphere = &s;
       tMin = t;
     }
   }
 
-  if (!hit)
+  for (const Plane& p : planes)
+  {
+    float t = Intersect(r, p);
+    if (t > 0 && t < tMin)
+    {
+      sphere = nullptr;
+      plane = &p;
+      tMin = t;
+    }
+  }
+
+  if (!sphere && !plane)
     return Color(0.1f, 0.1f, 0.1f);
+
+  const Material& m = sphere ? sphere->material : plane->material;
+
+  Color cur = (1.0f - depth/MAX_DEPTH) * (m.diffuse + m.emissive);
+
+  if (depth >= MAX_DEPTH)
+  {
+    return cur;
+  }
 
   // point on sphere
   Vector3 p = r.o + tMin * r.d;
-  Vector3 n = Normal(p, *hit);
-  float d = Dot(n, -r.d);
-  return Color(d, d, d);
+  Vector3 n = sphere ? Normal(p, *sphere) : Normal(p, *plane);
+
+  Vector3 v = RayInHemisphere(n);
+  return cur + Trace(Ray(p + 1e-4*n, v), depth + 1);
 }
 
 void Render(const Camera& cam)
@@ -131,7 +155,15 @@ void Render(const Camera& cam)
       // construct ray from eye pos through the image plane
       Ray r(cam.frame.origin, Normalize(p - cam.frame.origin));
 
-      *pp++ = Trace(r);
+      Color tmp(0,0,0);
+      u32 iterations = 25;
+      for (u32 i = 0; i < iterations; ++i)
+      {
+        tmp += Trace(r, 0);
+      }
+
+      *pp++ = tmp/(iterations*MAX_DEPTH);
+
 
       p.x += xInc;
     }
@@ -192,7 +224,16 @@ int main(int argc, char** argv)
   Camera cam;
   cam.fov = DegToRad(60);
   cam.dist = 10;
-  cam.frame = Frame(Vector3(1,0,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(0,10,-30));
+  cam.frame = Frame(Vector3(1,0,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(0,5,-10));
+
+  renderWindow.clear();
+  renderWindow.display();
+
+  renderWindow.clear();
+  Render(cam);
+  CopyToWindow(&texture);
+  renderWindow.draw(sprite);
+  renderWindow.display();
 
   while (!done)
   {
@@ -207,12 +248,6 @@ int main(int argc, char** argv)
         }
       }
     }
-
-    renderWindow.clear();
-    Render(cam);
-    CopyToWindow(&texture);
-    renderWindow.draw(sprite);
-    renderWindow.display();
   }
 
   Close();

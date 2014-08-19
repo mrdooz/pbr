@@ -96,6 +96,8 @@ namespace pbr
   }
 
   inline Vector3 Normalize(const Vector3& v) { return v / v.Length(); }
+
+  Vector3 RayInHemisphere(const Vector3& n);
   //---------------------------------------------------------------------------
   struct Ray
   {
@@ -130,7 +132,32 @@ namespace pbr
   {
     Color() {}
     Color(float r, float g, float b, float a = 1) : r(r), g(g), b(b), a(a) {}
+
+    Color& operator+=(const Color& rhs) { r += rhs.r; g += rhs.g; b += rhs.b; a *= rhs.a; return *this; }
     float r, g, b, a;
+  };
+
+  inline Color operator+(const Color& lhs, const Color& rhs)
+  {
+    return Color(lhs.r+rhs.r, lhs.g+rhs.g, lhs.b+rhs.b, lhs.a*rhs.a);
+  }
+
+  inline Color operator/(const Color& c, float s)
+  {
+    return Color(c.r/s, c.g/s, c.b/s, c.a);
+  }
+
+  inline Color operator*(float s, const Color& c)
+  {
+    return Color(c.r*s, c.g*s, c.b*s, c.a);
+  }
+
+  //---------------------------------------------------------------------------
+  struct Material
+  {
+    Material() : diffuse(0,0,0), emissive(0,0,0) {}
+    Color diffuse;
+    Color emissive;
   };
 
   //---------------------------------------------------------------------------
@@ -138,17 +165,34 @@ namespace pbr
   {
     Sphere() {}
     Sphere(const Vector3& c, float r) : c(c), r(r) {}
+    Material material;
     Vector3 c;
     float r;
   };
 
   //---------------------------------------------------------------------------
+  struct Plane
+  {
+    Plane() {}
+    Plane(const Vector3& n, float d) : n(n), d(d) {}
+    Material material;
+    Vector3 n;
+    float d;
+  };
+
+  //---------------------------------------------------------------------------
   void CreateCoordinateSystem(const Vector3& v1, Vector3* v2, Vector3* v3);
 
-  // return n flipped if it doesn't lie in the same hemispher are v
+  // return n flipped if it doesn't lie in the same hemisphere as v
   inline Vector3 Faceforward(const Vector3& n, const Vector3& v)
   {
     return Dot(v, n) < 0.0f ? -n : n;
+  }
+
+  //---------------------------------------------------------------------------
+  inline float Randf()
+  {
+    return rand() / (float)RAND_MAX;
   }
 
 

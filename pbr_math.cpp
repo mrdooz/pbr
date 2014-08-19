@@ -22,5 +22,17 @@ namespace pbr
 
     *v3 = Cross(v1, *v2);
   }
- 
+
+  //---------------------------------------------------------------------------
+  Vector3 RayInHemisphere(const Vector3& n)
+  {
+    while (true) {
+      float x = -1 + 2 * Randf();
+      float y = -1 + 2 * Randf();
+      float z = -1 + 2 * Randf();
+      if (Sq(x) + Sq(y) + Sq(z) < 1)
+        return Faceforward(Normalize(Vector3(x, y, z)), n);
+    }
+  }
+
 }
