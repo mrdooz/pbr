@@ -160,24 +160,43 @@ namespace pbr
     Color emissive;
   };
 
-  //---------------------------------------------------------------------------
-  struct Sphere
+  struct Geo;
+  struct HitRec
   {
-    Sphere() {}
-    Sphere(const Vector3& c, float r) : c(c), r(r) {}
-    Material material;
-    Vector3 c;
-    float r;
+    HitRec() : material(nullptr), geo(nullptr) {}
+    Vector3 pos;
+    Vector3 normal;
+    Material* material;
+    Geo* geo;
+    float t;
   };
 
   //---------------------------------------------------------------------------
-  struct Plane
+  struct Geo
+  {
+    virtual ~Geo() {}
+    virtual bool Intersect(const Ray& ray, HitRec* rec) = 0;
+    Material material;
+  };
+
+  //---------------------------------------------------------------------------
+  struct Sphere : public Geo
+  {
+    Sphere() {}
+    Sphere(const Vector3& c, float r) : center(c), radius(r) {}
+    virtual bool Intersect(const Ray& ray, HitRec* rec);
+    Vector3 center;
+    float radius;
+  };
+
+  //---------------------------------------------------------------------------
+  struct Plane : public Geo
   {
     Plane() {}
-    Plane(const Vector3& n, float d) : n(n), d(d) {}
-    Material material;
-    Vector3 n;
-    float d;
+    Plane(const Vector3& n, float d) : normal(n), distance(d) {}
+    virtual bool Intersect(const Ray& ray, HitRec* rec);
+    Vector3 normal;
+    float distance;
   };
 
   //---------------------------------------------------------------------------

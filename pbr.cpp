@@ -6,8 +6,7 @@ using namespace pbr;
 float* backbuffer;
 Vector2u windowSize;
 
-vector<Sphere> spheres;
-vector<Plane> planes;
+vector<Geo*> objects;
 
 int MAX_DEPTH = 3;
 
@@ -18,18 +17,17 @@ void Init()
   for (u32 i = 0; i < 10; ++i)
   {
     float angle = i * 2 * Pi / 10;
-    spheres.push_back(Sphere(Vector3(10 * cos(angle), 0, 30 + 10 * sin(angle)), 2));
-    spheres.back().material.diffuse = Color(0.1f, 0.2f, 0.4f);
+    objects.push_back(new Sphere(Vector3(10 * cos(angle), 0, 30 + 10 * sin(angle)), 2));
+    objects.back()->material.diffuse = Color(0.1f, 0.2f, 0.4f);
   }
 
-  Sphere center(Vector3(0, 0, 30), 5);
-  center.material.emissive = Color(1, 1, 1);
-  spheres.push_back(center);
+  Geo* center = new Sphere(Vector3(0, 0, 30), 5);
+  center->material.emissive = Color(1, 1, 1);
+  objects.push_back(center);
 
-  Plane plane(Vector3(0,1,0), 0);
-  plane.material.diffuse = Color(0.5f, 0.5f, 0.5f);
-  planes.push_back(plane);
-
+  Geo* plane = new Plane(Vector3(0,1,0), 0);
+  plane->material.diffuse = Color(0.5f, 0.5f, 0.5f);
+  objects.push_back(plane);
 }
 
 void Close()
@@ -37,89 +35,37 @@ void Close()
   free(backbuffer);
 }
 
-float Intersect(const Ray& r, const Plane& p)
-{
-  float vd = Dot(p.n, r.d);
-  if (vd >= 0)
-    return -1;
-
-  float v0 = -(Dot(p.n, r.o) + p.d);
-
-  return v0 / vd;
-}
-
-float Intersect(const Ray& r, const Sphere& s)
-{
-  // sphere intersection
-  float a = Dot(r.d, r.d);
-  float b = 2 * Dot(r.o - s.c, r.d);
-  float c = Dot(r.o - s.c, r.o - s.c) - Sq(s.r);
-
-  float disc = Sq(b) - 4 * a * c;
-  if (disc < 0)
-    return -1;
-
-  disc = sqrtf(disc);
-  float t0 = (-b - disc) / 2;
-  if (t0 > 0)
-    return t0;
-
-  float t1 = (-b + disc) / 2;
-  return t1;
-}
-
-Vector3 Normal(const Vector3& v, const Sphere& s)
-{
-  return Normalize(v - s.c);
-}
-
-Vector3 Normal(const Vector3& v, const Plane& p)
-{
-  return p.n;
-}
-
 Color Trace(const Ray& r, int depth)
 {
   float tMin = 1e20;
-  const Sphere* sphere = nullptr;
-  const Plane* plane = nullptr;
+  HitRec closest;
+  HitRec hitRec;
 
-  for (const Sphere& s : spheres)
+  for (Geo* obj : objects)
   {
-    float t = Intersect(r, s);
-    if (t > 0 && t < tMin)
+    if (obj->Intersect(r, &hitRec))
     {
-      sphere = &s;
-      tMin = t;
+      if (hitRec.t < tMin)
+      {
+        tMin = hitRec.t;
+        closest = hitRec;
+      }
     }
   }
 
-  for (const Plane& p : planes)
-  {
-    float t = Intersect(r, p);
-    if (t > 0 && t < tMin)
-    {
-      sphere = nullptr;
-      plane = &p;
-      tMin = t;
-    }
-  }
-
-  if (!sphere && !plane)
+  if (!closest.geo)
     return Color(0.1f, 0.1f, 0.1f);
 
-  const Material& m = sphere ? sphere->material : plane->material;
-
-  Color cur = (1.0f - depth/MAX_DEPTH) * (m.diffuse + m.emissive);
+  const Material* m = closest.material;
+  Color cur = (1.0f - depth/MAX_DEPTH) * (m->diffuse + m->emissive);
 
   if (depth >= MAX_DEPTH)
   {
     return cur;
   }
 
-  // point on sphere
-  Vector3 p = r.o + tMin * r.d;
-  Vector3 n = sphere ? Normal(p, *sphere) : Normal(p, *plane);
+  Vector3 p = closest.pos;
+  Vector3 n = closest.normal;
 
   Vector3 v = RayInHemisphere(n);
   return cur + Trace(Ray(p + 1e-4*n, v), depth + 1);
@@ -156,7 +102,7 @@ void Render(const Camera& cam)
       Ray r(cam.frame.origin, Normalize(p - cam.frame.origin));
 
       Color tmp(0,0,0);
-      u32 iterations = 25;
+      u32 iterations = 50;
       for (u32 i = 0; i < iterations; ++i)
       {
         tmp += Trace(r, 0);
