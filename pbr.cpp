@@ -2,6 +2,7 @@
 #include "pbr_math.hpp"
 
 using namespace pbr;
+using sf::Vector2f;
 
 float* backbuffer;
 Vector2u windowSize;
@@ -10,6 +11,7 @@ vector<Geo*> objects;
 
 int MAX_DEPTH = 3;
 
+//---------------------------------------------------------------------------
 void Init()
 {
   backbuffer = (float*)malloc(windowSize.x * windowSize.y * 4 * sizeof(float));
@@ -30,11 +32,13 @@ void Init()
   objects.push_back(plane);
 }
 
+//---------------------------------------------------------------------------
 void Close()
 {
   free(backbuffer);
 }
 
+//---------------------------------------------------------------------------
 Color Trace(const Ray& r, int depth)
 {
   float tMin = 1e20;
@@ -71,6 +75,7 @@ Color Trace(const Ray& r, int depth)
   return cur + Trace(Ray(p + 1e-4*n, v), depth + 1);
 }
 
+//---------------------------------------------------------------------------
 void Render(const Camera& cam)
 {
   // Note, assumes camera frame is orthonormal
@@ -118,13 +123,12 @@ void Render(const Camera& cam)
 
 }
 
+//---------------------------------------------------------------------------
 void CopyToWindow(sf::Texture* texture)
 {
-
   vector<sf::Color> buf(windowSize.x * windowSize.y);
 
   Color* pp = (Color*)backbuffer;
-
   for (u32 y = 0; y < windowSize.y; ++y)
   {
     for (u32 x = 0; x < windowSize.x; ++x)
@@ -140,8 +144,160 @@ void CopyToWindow(sf::Texture* texture)
   texture->update((const sf::Uint8*)buf.data());
 }
 
+//---------------------------------------------------------------------------
+float Dist(const Vector2f& a, const Vector2f& b)
+{
+  float dx = a.x - b.x;
+  float dy = a.y - b.y;
+  return dx*dx + dy*dy;
+}
 
+//---------------------------------------------------------------------------
+void CalcDistribution(const vector<Vector2f> points, float* mean, float* deviation)
+{
+  u32 numSamples = points.size();
+  vector<float> distances(points.size());
+  double sum = 0;
 
+  for (u32 i = 0; i < numSamples; ++i)
+  {
+    // find distance to closest point
+    float dist = FLT_MAX;
+    u32 idx;
+    for (u32 j = 0; j < numSamples; ++j)
+    {
+      if (i == j)
+        continue;
+
+      float tmp = Dist(points[i], points[j]);
+      if (tmp < dist)
+      {
+        dist = tmp;
+        idx = j;
+      }
+    }
+
+    float d = sqrtf(dist);
+    distances[i] = d;
+    sum += d;
+  }
+
+  // find mean
+  *mean = sum / numSamples;
+
+  // find standard deviation
+  double d = 0;
+  for (u32 i = 0; i < numSamples; ++i)
+  {
+    float dx = distances[i] - *mean;
+    d += dx * dx;
+  }
+
+  *deviation = sqrtf(d / numSamples);
+}
+
+//---------------------------------------------------------------------------
+float randf(float mn, float mx)
+{
+  float tmp = rand() / (float)RAND_MAX;
+  return mn + (mx - mn) * tmp;
+}
+
+//---------------------------------------------------------------------------
+// Poisson distributed samples, from "Antialiased Images at Low Sampling Densities"
+void PoissonSamples(u32 numSamples, sf::Texture* texture, vector<Vector2f>* samples)
+{
+  int w = windowSize.x;
+  int h = windowSize.y;
+
+  vector<sf::Color> buf(w*h);
+  memset(buf.data(), 0, w*h*4);
+
+  int f = sqrt(numSamples);
+
+  int cellsX = w / f;
+  int cellsY = h / f;
+
+  int subCellsX = cellsX * 4;
+  int subCellsY = cellsY * 4;
+
+  // 2d space is divided into sqrt(numSamples) grid cells, and each grid cell further
+  // divided into 4x4 cells
+  vector<float> d(subCellsX*subCellsY);
+
+  for (u32 i = 1; i < subCellsY; ++i)
+  {
+    for (u32 j = 1; j < subCellsX; ++j)
+    {
+      // calc T value for current cell
+      float t = (4 * d[(j - 1) + (i) * subCellsX] + d[(j - 1) + (i - 1) * subCellsX] + 2 * d[(j) + (i - 1) * subCellsX] + d[(j + 1) + (i - 1) * subCellsX]) / 8;
+      t += randf(1.f / 16 - 1.f / 64, 1.f / 16 + 1.f / 64);
+
+      // determine if the current cell should have a pixel
+      float s = t < 0.5f ? 0 : 1;
+      d[j + i * subCellsX] = t - s;
+
+      if (s > 0)
+      {
+        float x = j * (f/4);
+        float y = i * (f/4);
+        samples->push_back({x, y});
+        buf[y * w + x] = sf::Color::White;
+      }
+    }
+  }
+
+  texture->update((const sf::Uint8*)buf.data());
+
+}
+
+//---------------------------------------------------------------------------
+void RandomSamples(u32 numSamples, sf::Texture* texture, vector<Vector2f>* samples)
+{
+  int w = windowSize.x;
+  int h = windowSize.y;
+
+  vector<sf::Color> buf(w*h);
+  samples->resize(numSamples);
+  memset(buf.data(), 0, w*h*4);
+
+  for (u32 i = 0; i < numSamples; ++i)
+  {
+    float x = rand() % windowSize.x;
+    float y = rand() % windowSize.y;
+    (*samples)[i] = {x, y};
+    buf[y*w+x] = sf::Color::White;
+  }
+
+  texture->update((const sf::Uint8*)buf.data());
+}
+
+//---------------------------------------------------------------------------
+void UniformSamples(u32 numSamples, sf::Texture* texture, vector<Vector2f>* samples)
+{
+  int w = windowSize.x;
+  int h = windowSize.y;
+
+  vector<sf::Color> buf(w*h);
+  samples->resize(numSamples);
+  memset(buf.data(), 0, w*h*4);
+
+  int f = sqrt(numSamples);
+
+  for (u32 i = 0; i < numSamples; ++i)
+  {
+    float x = rand() % windowSize.x;
+    float y = rand() % windowSize.y;
+    x = w / f * (i % f);
+    y = h / f * (i / f);
+    (*samples)[i] = {x, y};
+    buf[y*w+x] = sf::Color::White;
+  }
+
+  texture->update((const sf::Uint8*)buf.data());
+}
+
+//---------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
   u32 width, height;
@@ -156,6 +312,7 @@ int main(int argc, char** argv)
 
   sf::ContextSettings settings;
   windowSize = Vector2u(8 * width / 10, 8 * height / 10);
+  windowSize = { 1024, 768 };
   RenderWindow renderWindow(sf::VideoMode(windowSize.x, windowSize.y), "...", sf::Style::Default, settings);
 
   Init();
@@ -176,8 +333,17 @@ int main(int argc, char** argv)
   renderWindow.display();
 
   renderWindow.clear();
-  Render(cam);
-  CopyToWindow(&texture);
+
+  vector<Vector2f> samples;
+//  RandomSamples(1024, &texture, &samples);
+  PoissonSamples(1024, &texture, &samples);
+
+  float mean, dev;
+  CalcDistribution(samples, &mean, &dev);
+  printf("mean: %.3f, stddev: %.3f\n", mean, dev);
+
+//  Render(cam);
+//  CopyToWindow(&texture);
   renderWindow.draw(sprite);
   renderWindow.display();
 
