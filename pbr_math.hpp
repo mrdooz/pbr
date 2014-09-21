@@ -9,6 +9,13 @@ namespace pbr
   const float Pi = 3.14159265359f;
 
   //---------------------------------------------------------------------------
+  inline float randf(float mn, float mx)
+  {
+    float tmp = rand() / (float)RAND_MAX;
+    return mn + (mx - mn) * tmp;
+  }
+
+  //---------------------------------------------------------------------------
   inline float DegToRad(float deg)
   {
     return deg / 180.0f * Pi;
@@ -125,6 +132,8 @@ namespace pbr
     float fov;
     // distance from eye pos to image plane
     float dist;
+
+    float lensWidth;
   };
 
   //---------------------------------------------------------------------------
@@ -175,7 +184,7 @@ namespace pbr
   struct Geo
   {
     virtual ~Geo() {}
-    virtual bool Intersect(const Ray& ray, HitRec* rec) = 0;
+    virtual bool Intersect(const Ray& ray, float* tClosest, HitRec* rec) = 0;
     Material material;
   };
 
@@ -184,7 +193,7 @@ namespace pbr
   {
     Sphere() {}
     Sphere(const Vector3& c, float r) : center(c), radius(r) {}
-    virtual bool Intersect(const Ray& ray, HitRec* rec);
+    virtual bool Intersect(const Ray& ray, float* tClosest, HitRec* rec);
     Vector3 center;
     float radius;
   };
@@ -194,7 +203,7 @@ namespace pbr
   {
     Plane() {}
     Plane(const Vector3& n, float d) : normal(n), distance(d) {}
-    virtual bool Intersect(const Ray& ray, HitRec* rec);
+    virtual bool Intersect(const Ray& ray, float* tClosest, HitRec* rec);
     Vector3 normal;
     float distance;
   };
@@ -213,6 +222,23 @@ namespace pbr
   {
     return rand() / (float)RAND_MAX;
   }
+
+  //---------------------------------------------------------------------------
+  // Returns points in [0..1], [0..1] distributed in a Poisson distribution
+  struct PoissonSampler
+  {
+    PoissonSampler();
+    void Init(u32 numSamples);
+    Vector2f NextSample();
+    Vector2f NextDiskSample();
+
+    void MapSamplesToUnitDisk();
+
+    vector<Vector2f> _samples;
+    vector<Vector2f> _diskSamples;
+    u32 _idx;
+    u32 _idxDisk;
+  };
 
 
 }
