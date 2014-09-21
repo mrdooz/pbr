@@ -27,6 +27,31 @@ namespace pbr
     return rad / Pi * 180.0f;
   }
 
+  struct Vector2
+  {
+    Vector2() {}
+    Vector2(float x, float y) : x(x), y(y) {}
+
+    float operator[](int i) const { assert(i == 0 || i == 1); return (&x)[i]; }
+    float& operator[](int i) { assert(i == 0 || i == 1); return (&x)[i]; }
+
+    Vector2 operator+(const Vector2& rhs) const { return Vector2(x+rhs.x, y+rhs.y); }
+    Vector2& operator+=(const Vector2& rhs) { x += rhs.x; y += rhs.y; return *this; }
+
+    Vector2 operator-(const Vector2& rhs) const { return Vector2(x-rhs.x, y-rhs.y); }
+    Vector2& operator-=(const Vector2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+
+    Vector2 operator*(float f) const { return Vector2(f*x, f*y); }
+
+    float LengthSquared() const { return x*x + y*y; }
+    float Length() const { return sqrtf(LengthSquared()); }
+
+    float x, y;
+  };
+
+  inline Vector2 operator*(float f, const Vector2& v) { return v*f; }
+
+
   //---------------------------------------------------------------------------
   struct Vector3
   {
@@ -224,18 +249,34 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
+  struct Sampler
+  {
+    virtual ~Sampler() {}
+    virtual void Init(u32 numSamplers) {};
+    virtual Vector2 NextSample() = 0;
+    virtual Vector2 NextDiskSample() = 0;
+  };
+
+  //---------------------------------------------------------------------------
+  struct RandomSampler : public Sampler
+  {
+    virtual Vector2 NextSample();
+    virtual Vector2 NextDiskSample();
+  };
+
+  //---------------------------------------------------------------------------
   // Returns points in [0..1], [0..1] distributed in a Poisson distribution
-  struct PoissonSampler
+  struct PoissonSampler : public Sampler
   {
     PoissonSampler();
-    void Init(u32 numSamples);
-    Vector2f NextSample();
-    Vector2f NextDiskSample();
+    virtual void Init(u32 numSamples);
+    virtual Vector2 NextSample();
+    virtual Vector2 NextDiskSample();
 
     void MapSamplesToUnitDisk();
 
-    vector<Vector2f> _samples;
-    vector<Vector2f> _diskSamples;
+    vector<Vector2> _samples;
+    vector<Vector2> _diskSamples;
     u32 _idx;
     u32 _idxDisk;
   };

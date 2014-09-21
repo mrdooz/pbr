@@ -146,8 +146,8 @@ void RayTrace(const Camera& cam)
   float xInc = imagePlaneWidth / (windowSize.x - 1);
   float yInc = -imagePlaneHeight / (windowSize.y - 1);
 
-  PoissonSampler sampler;
-  sampler.Init(64);
+  Sampler* sampler = new PoissonSampler();
+  sampler->Init(64);
 
   // top left corner
   Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight/2 * cam.frame.up + cam.dist * cam.frame.dir);
@@ -165,7 +165,7 @@ void RayTrace(const Camera& cam)
       for (u32 i = 0; i < numSamples; ++i)
       {
         // construct ray from eye pos through the image plane
-        Vector2f ofs = sampler.NextSample();
+        Vector2 ofs = sampler->NextSample();
         Ray r(cam.frame.origin, Normalize((p + Vector3(ofs.x * xInc, -ofs.y * yInc, 0)) - cam.frame.origin));
 
         HitRec closest;

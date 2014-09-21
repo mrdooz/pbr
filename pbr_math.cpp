@@ -102,6 +102,26 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
+  Vector2 RandomSampler::NextSample()
+  {
+    return Vector2(randf(-1.f, 1.f), randf(-1.f, 1.f));
+  }
+
+  //---------------------------------------------------------------------------
+  Vector2 RandomSampler::NextDiskSample()
+  {
+    while (true)
+    {
+      Vector2 v(randf(-1.f, 1.f), randf(-1.f, 1.f));
+      float r = v.Length();
+      if (r <= 1.f)
+        return v;
+    }
+
+    return Vector2(0,0);
+  }
+
+  //---------------------------------------------------------------------------
   PoissonSampler::PoissonSampler()
       : _idx(0)
       , _idxDisk(0)
@@ -149,7 +169,7 @@ namespace pbr
     // from "Ray Tracing from the Ground Up", page 123
     for (u32 i = 0; i < _diskSamples.size(); ++i)
     {
-      Vector2f s = 2.f * _samples[i] - Vector2f(-1, -1);
+      Vector2 s = 2.f * _samples[i] - Vector2(-1, -1);
       float r, phi;
 
       if (s.x > -s.y)
@@ -187,7 +207,7 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
-  Vector2f PoissonSampler::NextSample()
+  Vector2 PoissonSampler::NextSample()
   {
     u32 tmp = _idx;
     _idx = (_idx + 1) % _samples.size();
@@ -195,7 +215,7 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
-  Vector2f PoissonSampler::NextDiskSample()
+  Vector2 PoissonSampler::NextDiskSample()
   {
     u32 tmp = _idxDisk;
     _idxDisk = (_idxDisk + 1) % _diskSamples.size();
