@@ -2,7 +2,7 @@
 #include "pbr_math.hpp"
 
 using namespace pbr;
-using sf::Vector2f;
+//using sf::Vector2f;
 
 float* backbuffer;
 Vector2u windowSize;
@@ -215,16 +215,27 @@ void CopyToWindow(sf::Texture* texture)
   texture->update((const sf::Uint8*)buf.data());
 }
 
-//---------------------------------------------------------------------------
-float Dist(const Vector2f& a, const Vector2f& b)
+void DisplaySamples(const vector<Vector2>& samples, sf::Texture* texture)
 {
-  float dx = a.x - b.x;
-  float dy = a.y - b.y;
-  return dx*dx + dy*dy;
+  int w = windowSize.x;
+  int h = windowSize.y;
+
+  vector<sf::Color> buf(w*h);
+  memset(buf.data(), 0, w*h*4);
+
+  for (const Vector2& v : samples)
+  {
+    // convert from [-1, +1], [-1, +1] to window size
+    int x = w/2 + w/2 * v.x;
+    int y = h/2 + h/2 * v.y;
+
+    buf[y * w + x] = sf::Color::White;
+  }
+  texture->update((const sf::Uint8*)buf.data());
 }
 
 //---------------------------------------------------------------------------
-void CalcDistribution(const vector<Vector2f> points, float* mean, float* deviation)
+void CalcDistribution(const vector<Vector2> points, float* mean, float* deviation)
 {
   u32 numSamples = points.size();
   vector<float> distances(points.size());
@@ -240,7 +251,7 @@ void CalcDistribution(const vector<Vector2f> points, float* mean, float* deviati
       if (i == j)
         continue;
 
-      float tmp = Dist(points[i], points[j]);
+      float tmp = (points[i] - points[j]).LengthSquared();
       if (tmp < dist)
       {
         dist = tmp;
@@ -399,21 +410,30 @@ int main(int argc, char** argv)
 
   renderWindow.clear();
 
-  bool dist = false;
+  bool dist = true;
 
   if (dist)
   {
-    vector<Vector2f> samples;
-//  RandomSamples(1024, &texture, &samples);
-    PoissonSamples(1024, &texture, &samples);
+    Sampler* sampler = new UniformSampler();
+    int s = 1 << 10;
+    sampler->Init(s);
+
+    vector<Vector2> samples;
+    samples.resize(s);
+
+    for (int i = 0; i < s; ++i)
+      samples[i] = sampler->NextSample();
 
     float mean, dev;
     CalcDistribution(samples, &mean, &dev);
     printf("mean: %.3f, stddev: %.3f\n", mean, dev);
+    DisplaySamples(samples, &texture);
   }
-
-  RayTrace(cam);
-  CopyToWindow(&texture);
+  else
+  {
+    RayTrace(cam);
+    CopyToWindow(&texture);
+  }
 
   renderWindow.draw(sprite);
   renderWindow.display();

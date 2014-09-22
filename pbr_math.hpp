@@ -252,7 +252,7 @@ namespace pbr
   struct Sampler
   {
     virtual ~Sampler() {}
-    virtual void Init(u32 numSamplers) {};
+    virtual void Init(u32 numSamples) {};
     virtual Vector2 NextSample() = 0;
     virtual Vector2 NextDiskSample() = 0;
   };
@@ -262,6 +262,17 @@ namespace pbr
   {
     virtual Vector2 NextSample();
     virtual Vector2 NextDiskSample();
+  };
+
+  struct UniformSampler : public Sampler
+  {
+    UniformSampler();
+    virtual void Init(u32 numSamples);
+    virtual Vector2 NextSample();
+    virtual Vector2 NextDiskSample();
+
+    vector<Vector2> _samples;
+    u32 _idx;
   };
 
   //---------------------------------------------------------------------------

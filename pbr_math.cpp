@@ -122,6 +122,46 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
+  UniformSampler::UniformSampler()
+      : _idx(0)
+  {
+  }
+
+  void UniformSampler::Init(u32 numSamples)
+  {
+    int s = (int)sqrt(numSamples);
+
+    float y = -1.f;
+    float inc = 2.f / s;
+    int idx = 0;
+    _samples.resize(numSamples);
+
+    for (int i = 0; i < s; ++i)
+    {
+      float x = -1.f;
+      for (int j = 0; j < s; ++j)
+      {
+        _samples[idx++] = Vector2(x, y);
+        x += inc;
+      }
+      y += inc;
+    }
+  }
+
+  Vector2 UniformSampler::NextSample()
+  {
+    u32 tmp = _idx;
+    _idx = (_idx + 1) % _samples.size();
+    return _samples[tmp];
+  }
+
+  Vector2 UniformSampler::NextDiskSample()
+  {
+    return Vector2(0,0);
+  }
+
+
+  //---------------------------------------------------------------------------
   PoissonSampler::PoissonSampler()
       : _idx(0)
       , _idxDisk(0)
