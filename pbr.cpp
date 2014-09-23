@@ -410,12 +410,12 @@ int main(int argc, char** argv)
 
   renderWindow.clear();
 
-  bool dist = true;
+  bool dist = false;
 
   if (dist)
   {
-    Sampler* sampler = new UniformSampler();
-    int s = 1 << 10;
+    Sampler* sampler = new PoissonSampler();
+    int s = 1 << 12;
     sampler->Init(s);
 
     vector<Vector2> samples;

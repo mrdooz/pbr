@@ -171,16 +171,16 @@ namespace pbr
   //---------------------------------------------------------------------------
   void PoissonSampler::Init(u32 numSamples)
   {
-    int subCellsX = numSamples * 4;
-    int subCellsY = numSamples * 4;
+    s64 subCellsX = numSamples * 4;
+    s64 subCellsY = numSamples * 4;
 
     // 2d space is divided into sqrt(numSamples) grid cells, and each grid cell further
     // divided into 4x4 cells
     vector<float> d(subCellsX*subCellsY);
 
-    for (u32 i = 1; i < subCellsY; ++i)
+    for (s64 i = 1; i < subCellsY; ++i)
     {
-      for (u32 j = 1; j < subCellsX; ++j)
+      for (s64 j = 1; j < subCellsX; ++j)
       {
         // calc T value for current cell
         float t = (4 * d[(j - 1) + (i) * subCellsX] + d[(j - 1) + (i - 1) * subCellsX] + 2 * d[(j) + (i - 1) * subCellsX] + d[(j + 1) + (i - 1) * subCellsX]) / 8;
@@ -192,8 +192,8 @@ namespace pbr
 
         if (s > 0)
         {
-          float x = (j-1) / (float)(subCellsX-2);
-          float y = (i-1) / (float)(subCellsY-2);
+          float x = -1 + 2 * ((j-1) / (float)(subCellsX-2));
+          float y = -1 + 2 * ((i-1) / (float)(subCellsY-2));
           _samples.push_back({x, y});
         }
       }
