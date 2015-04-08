@@ -4,22 +4,34 @@
 using namespace pbr;
 //using sf::Vector2f;
 
-float* backbuffer;
 Vector2u windowSize;
 
 vector<Geo*> objects;
 
 int MAX_DEPTH = 3;
 
+struct Buffer
+{
+  Buffer(int width, int height) : width(width), height(height), buffer(new Color[width*height]) {}
+  ~Buffer() { delete [] buffer; }
+  Buffer(const Buffer&) = delete;
+  Buffer& operator=(Buffer&) = delete;
+
+  int width, height;
+  Color* buffer;
+};
+
+Buffer* backbuffer;
+
 //---------------------------------------------------------------------------
 void Init()
 {
-  backbuffer = (float*)malloc(windowSize.x * windowSize.y * 4 * sizeof(float));
+  backbuffer = new Buffer(windowSize.x, windowSize.y);
 
   for (u32 i = 0; i < 10; ++i)
   {
     float angle = i * 2 * Pi / 10;
-    objects.push_back(new Sphere(Vector3(10 * cos(angle), 0, 30 + 10 * sin(angle)), 2));
+    objects.push_back(new Sphere(Vector3(10 * cosf(angle), 0, 30 + 10 * sinf(angle)), 2));
     objects.back()->material.diffuse = Color(0.1f, 0.2f, 0.4f);
   }
 
@@ -88,7 +100,7 @@ void PathTrace(const Camera& cam)
   Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight/2 * cam.frame.up + cam.dist * cam.frame.dir);
   Vector3 tmp = p;
 
-  Color* pp = (Color*)backbuffer;
+  Color* pp = backbuffer->buffer;
 
   for (u32 y = 0; y < windowSize.y; ++y)
   {
@@ -132,8 +144,6 @@ bool Intersect(const Ray& r, HitRec* hitRec)
 //---------------------------------------------------------------------------
 void RayTrace(const Camera& cam)
 {
-  // Note, assumes camera frame is orthonormal
-
   // Compute size of the image plane. This is the plane at distance d from the
   // camera that we will shoot rays through (without AA, one ray per pixel).
   // The size of the image plane depends on 'd' and the camera fov. For the y
@@ -146,14 +156,14 @@ void RayTrace(const Camera& cam)
   float xInc = imagePlaneWidth / (windowSize.x - 1);
   float yInc = -imagePlaneHeight / (windowSize.y - 1);
 
-  Sampler* sampler = new PoissonSampler();
-  sampler->Init(64);
+  PoissonSampler sampler;
+  sampler.Init(64);
 
   // top left corner
   Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight/2 * cam.frame.up + cam.dist * cam.frame.dir);
   Vector3 tmp = p;
 
-  Color* pp = (Color*)backbuffer;
+  Color* pp = backbuffer->buffer;
 
   for (u32 y = 0; y < windowSize.y; ++y)
   {
@@ -161,17 +171,17 @@ void RayTrace(const Camera& cam)
     for (u32 x = 0; x < windowSize.x; ++x)
     {
       Color col(0,0,0);
-      u32 numSamples = 4;
+      u32 numSamples = 1;
       for (u32 i = 0; i < numSamples; ++i)
       {
         // construct ray from eye pos through the image plane
-        Vector2 ofs = sampler->NextSample();
+        Vector2 ofs = sampler.NextSample();
         Ray r(cam.frame.origin, Normalize((p + Vector3(ofs.x * xInc, -ofs.y * yInc, 0)) - cam.frame.origin));
 
         HitRec closest;
         if (Intersect(r, &closest))
         {
-          Vector3 p = closest.pos;
+//          Vector3 p = closest.pos;
           Vector3 n = closest.normal;
 
           // light ray
@@ -195,26 +205,27 @@ void RayTrace(const Camera& cam)
 }
 
 //---------------------------------------------------------------------------
-void CopyToWindow(sf::Texture* texture)
+void BufferToTexture(Buffer* buffer, sf::Texture *texture)
 {
   vector<sf::Color> buf(windowSize.x * windowSize.y);
 
-  Color* pp = (Color*)backbuffer;
+  Color* pp = buffer->buffer;
   for (u32 y = 0; y < windowSize.y; ++y)
   {
     for (u32 x = 0; x < windowSize.x; ++x)
     {
       const Color &col = *pp++;
-      buf[y * windowSize.x + x].r = col.r * 255;
-      buf[y * windowSize.x + x].g = col.g * 255;
-      buf[y * windowSize.x + x].b = col.b * 255;
-      buf[y * windowSize.x + x].a = col.a * 255;
+      buf[y * windowSize.x + x].r = (u8)(col.r * 255);
+      buf[y * windowSize.x + x].g = (u8)(col.g * 255);
+      buf[y * windowSize.x + x].b = (u8)(col.b * 255);
+      buf[y * windowSize.x + x].a = (u8)(col.a * 255);
     }
   }
 
   texture->update((const sf::Uint8*)buf.data());
 }
 
+//---------------------------------------------------------------------------
 void DisplaySamples(const vector<Vector2>& samples, sf::Texture* texture)
 {
   int w = windowSize.x;
@@ -237,7 +248,7 @@ void DisplaySamples(const vector<Vector2>& samples, sf::Texture* texture)
 //---------------------------------------------------------------------------
 void CalcDistribution(const vector<Vector2> points, float* mean, float* deviation)
 {
-  u32 numSamples = points.size();
+  u32 numSamples = (u32)points.size();
   vector<float> distances(points.size());
   double sum = 0;
 
@@ -265,7 +276,7 @@ void CalcDistribution(const vector<Vector2> points, float* mean, float* deviatio
   }
 
   // find mean
-  *mean = sum / numSamples;
+  *mean = (float)(sum / numSamples);
 
   // find standard deviation
   double d = 0;
@@ -275,7 +286,7 @@ void CalcDistribution(const vector<Vector2> points, float* mean, float* deviatio
     d += dx * dx;
   }
 
-  *deviation = sqrtf(d / numSamples);
+  *deviation = sqrtf((float)(d / numSamples));
 }
 
 
@@ -374,6 +385,25 @@ void UniformSamples(u32 numSamples, sf::Texture* texture, vector<Vector2f>* samp
 }
 
 //---------------------------------------------------------------------------
+void ShowDistribution(Texture& texture)
+{
+  Sampler* sampler = new PoissonSampler();
+  int s = 1 << 12;
+  sampler->Init(s);
+
+  vector<Vector2> samples;
+  samples.resize(s);
+
+  for (int i = 0; i < s; ++i)
+    samples[i] = sampler->NextSample();
+
+  float mean, dev;
+  CalcDistribution(samples, &mean, &dev);
+  printf("mean: %.3f, stddev: %.3f\n", mean, dev);
+  DisplaySamples(samples, &texture);
+}
+
+//---------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
   u32 width, height;
@@ -382,8 +412,8 @@ int main(int argc, char** argv)
   height = GetSystemMetrics(SM_CYFULLSCREEN);
 #else
   auto displayId = CGMainDisplayID();
-  width = CGDisplayPixelsWide(displayId);
-  height = CGDisplayPixelsHigh(displayId);
+  width = (u32)CGDisplayPixelsWide(displayId);
+  height = (u32)CGDisplayPixelsHigh(displayId);
 #endif
 
   sf::ContextSettings settings;
@@ -414,25 +444,12 @@ int main(int argc, char** argv)
 
   if (dist)
   {
-    Sampler* sampler = new PoissonSampler();
-    int s = 1 << 12;
-    sampler->Init(s);
-
-    vector<Vector2> samples;
-    samples.resize(s);
-
-    for (int i = 0; i < s; ++i)
-      samples[i] = sampler->NextSample();
-
-    float mean, dev;
-    CalcDistribution(samples, &mean, &dev);
-    printf("mean: %.3f, stddev: %.3f\n", mean, dev);
-    DisplaySamples(samples, &texture);
+    ShowDistribution(texture);
   }
   else
   {
     RayTrace(cam);
-    CopyToWindow(&texture);
+    BufferToTexture(backbuffer, &texture);
   }
 
   renderWindow.draw(sprite);

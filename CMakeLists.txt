@@ -9,15 +9,15 @@ if (MSVC)
   set(SFML_STATIC_LIBRARIES TRUE)
 endif()
 find_package(SFML 2 REQUIRED system window graphics)
-find_package(Boost REQUIRED)
-find_package(Protobuf REQUIRED)
+#find_package(Boost REQUIRED)
+#find_package(Protobuf REQUIRED)
 # todo, why is this required to be upper case?
-find_package(BRISTOL COMPONENTS main sfml)
+#find_package(BRISTOL COMPONENTS main sfml)
 
-include_directories(${Boost_INCLUDE_DIR})
+#include_directories(${Boost_INCLUDE_DIR})
 include_directories(${SFML_INCLUDE_DIR})
-include_directories(${PROTOBUF_INCLUDE_DIR})
-include_directories(${BRISTOL_INCLUDE_DIR})
+#include_directories(${PROTOBUF_INCLUDE_DIR})
+#include_directories(${BRISTOL_INCLUDE_DIR})
 
 file(GLOB SRC "*.cpp" "*.hpp" "protocol/*.pb.cc")
 
@@ -39,10 +39,10 @@ if (APPLE)
   # specifically link against a protobuf and boost build with libc++
   target_link_libraries(${PROJECT_NAME}
     ${SFML_LIBRARIES}
-    "/Users/dooz/Library/Caches/appCode30/DerivedData/bristol-e7802bc5/Build/Products/Debug/libbristol_main.a"
-    "/Users/dooz//Library/Caches/appCode30/DerivedData/bristol-e7802bc5/Build/Products/Debug/libbristol_sfml.a"
-    "/opt/local/boost/lib/libboost_date_time.a"
-    "/opt/local/protobuf/lib/libprotobuf.a"
+#    "/Users/dooz/Library/Caches/appCode30/DerivedData/bristol-e7802bc5/Build/Products/Debug/libbristol_main.a"
+#    "/Users/dooz//Library/Caches/appCode30/DerivedData/bristol-e7802bc5/Build/Products/Debug/libbristol_sfml.a"
+#    "/opt/local/boost/lib/libboost_date_time.a"
+#    "/opt/local/protobuf/lib/libprotobuf.a"
     ${APP_SERVICES} )
 else()
   if (MSVC)

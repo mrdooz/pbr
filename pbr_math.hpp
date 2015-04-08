@@ -1,6 +1,7 @@
 #pragma once
 #include <assert.h>
 #include <math.h>
+#include "precompiled.hpp"
 
 namespace pbr
 {

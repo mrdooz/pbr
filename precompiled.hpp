@@ -7,6 +7,8 @@
 #else
 #include <unistd.h>
 #include <CoreGraphics/CGDirectDisplay.h>
+#include <vector>
+#include <stdint.h>
 #endif
 
 #include <SFML/Graphics.hpp>
