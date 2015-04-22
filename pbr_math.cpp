@@ -39,7 +39,7 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
-  bool Sphere::Intersect(const Ray& ray, float* tClosest, HitRec* rec)
+  bool Sphere::Intersect(const Ray& ray, HitRec* rec)
   {
     // sphere intersection
     float a = Dot(ray.d, ray.d);
@@ -61,23 +61,20 @@ namespace pbr
       t = t1;
     }
 
-    if (tClosest)
-    {
-      if (t >= *tClosest)
-        return false;
-      *tClosest = t;
-    }
+    if (t >= rec->t)
+      return false;
+    rec->t = t;
 
     rec->pos = ray.o + t * ray.d;
     rec->normal = Normalize(rec->pos - center);
-    rec->material = &material;
+    rec->material = material;
     rec->geo = this;
     rec->t = t;
     return true;
   }
 
   //---------------------------------------------------------------------------
-  bool Plane::Intersect(const Ray& ray, float* tClosest, HitRec* rec)
+  bool Plane::Intersect(const Ray& ray, HitRec* rec)
   {
     float vd = Dot(normal, ray.d);
     if (vd >= 0)
@@ -86,16 +83,13 @@ namespace pbr
     float v0 = -(Dot(normal, ray.o) + distance);
     float t = v0 / vd;
 
-    if (tClosest)
-    {
-      if (t >= *tClosest)
-        return false;
-      *tClosest = t;
-    }
+    if (t >= rec->t)
+      return false;
+    rec->t = t;
 
     rec->pos = ray.o + t * ray.d;
     rec->normal = normal;
-    rec->material = &material;
+    rec->material = material;
     rec->geo = this;
     rec->t = t;
     return true;
@@ -117,8 +111,6 @@ namespace pbr
       if (r <= 1.f)
         return v;
     }
-
-    return Vector2(0,0);
   }
 
   //---------------------------------------------------------------------------
@@ -151,7 +143,7 @@ namespace pbr
   Vector2 UniformSampler::NextSample()
   {
     u32 tmp = _idx;
-    _idx = (_idx + 1) % _samples.size();
+    _idx = (_idx + 1) % (u32)_samples.size();
     return _samples[tmp];
   }
 
@@ -260,6 +252,18 @@ namespace pbr
     u32 tmp = _idxDisk;
     _idxDisk = (_idxDisk + 1) % _diskSamples.size();
     return _diskSamples[tmp];
+  }
+
+  //---------------------------------------------------------------------------
+  Color DiffuseMaterial::BDRF(float cosOut, float cosIn)
+  {
+    return diffuse / M_PI;
+  }
+
+  //---------------------------------------------------------------------------
+  Color DiffuseMaterial::Emissive(float cosOut)
+  {
+    return emissive;
   }
 
 }

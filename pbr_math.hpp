@@ -190,15 +190,30 @@ namespace pbr
   //---------------------------------------------------------------------------
   struct Material
   {
-    Material() : diffuse(0,0,0), emissive(0,0,0) {}
-    Color diffuse;
+    Material(const Color& diffuse, const Color& specular = Color(0,0,0), const Color& emissive = Color(0,0,0))
+        : diffuse(diffuse)
+        , specular(specular)
+        , emissive(emissive) {}
+    virtual Color BDRF(float cosOut, float cosIn) = 0;
+    virtual Color Emissive(float cosOut) = 0;
     Color emissive;
+    Color diffuse;
+    Color specular;
   };
 
+  //---------------------------------------------------------------------------
+  struct DiffuseMaterial : public Material
+  {
+    DiffuseMaterial(const Color& diffuse, const Color& emissive = Color(0,0,0)) : Material(diffuse, emissive) {}
+    virtual Color BDRF(float cosOut, float cosIn);
+    virtual Color Emissive(float cosOut);
+  };
+
+  //---------------------------------------------------------------------------
   struct Geo;
   struct HitRec
   {
-    HitRec() : material(nullptr), geo(nullptr) {}
+    HitRec() : material(nullptr), geo(nullptr), t(FLT_MAX) {}
     Vector3 pos;
     Vector3 normal;
     Material* material;
@@ -210,8 +225,8 @@ namespace pbr
   struct Geo
   {
     virtual ~Geo() {}
-    virtual bool Intersect(const Ray& ray, float* tClosest, HitRec* rec) = 0;
-    Material material;
+    virtual bool Intersect(const Ray& ray, HitRec* rec) = 0;
+    Material* material = nullptr;
   };
 
   //---------------------------------------------------------------------------
@@ -219,7 +234,7 @@ namespace pbr
   {
     Sphere() {}
     Sphere(const Vector3& c, float r) : center(c), radius(r) {}
-    virtual bool Intersect(const Ray& ray, float* tClosest, HitRec* rec);
+    virtual bool Intersect(const Ray& ray, HitRec* rec);
     Vector3 center;
     float radius;
   };
@@ -229,7 +244,7 @@ namespace pbr
   {
     Plane() {}
     Plane(const Vector3& n, float d) : normal(n), distance(d) {}
-    virtual bool Intersect(const Ray& ray, float* tClosest, HitRec* rec);
+    virtual bool Intersect(const Ray& ray, HitRec* rec);
     Vector3 normal;
     float distance;
   };

@@ -31,16 +31,18 @@ void Init()
   for (u32 i = 0; i < 10; ++i)
   {
     float angle = i * 2 * Pi / 10;
-    objects.push_back(new Sphere(Vector3(10 * cosf(angle), 0, 30 + 10 * sinf(angle)), 2));
-    objects.back()->material.diffuse = Color(0.1f, 0.2f, 0.4f);
+    Geo* g = new Sphere(Vector3(10 * cosf(angle), 0, 30 + 10 * sinf(angle)), 2);
+    g->material = new DiffuseMaterial(Color(0.1f, 0.2f, 0.4f));
+    objects.push_back(g);
   }
 
   Geo* center = new Sphere(Vector3(0, 0, 30), 5);
-  center->material.emissive = Color(0.75f, 0.75f, 0.75f);
+
+  center->material = new DiffuseMaterial(Color(0,0,0), Color(0.75f, 0.75f, 0.75f));
   objects.push_back(center);
 
   Geo* plane = new Plane(Vector3(0,1,0), 0);
-  plane->material.diffuse = Color(0.5f, 0.5f, 0.5f);
+  plane->material = new DiffuseMaterial(Color(0.5f, 0.5f, 0.5f));
   objects.push_back(plane);
 }
 
@@ -53,12 +55,14 @@ void Close()
 //---------------------------------------------------------------------------
 Color PathTraceInner(const Ray& r, int depth)
 {
-  float tMin = 1e20;
+  // broken :(
+  return Color(0,0,0);
+#if 0
   HitRec closest;
 
   for (Geo* obj : objects)
   {
-    obj->Intersect(r, &tMin, &closest);
+    obj->Intersect(r, &closest);
   }
 
   if (!closest.geo)
@@ -77,6 +81,7 @@ Color PathTraceInner(const Ray& r, int depth)
 
   Vector3 v = RayInHemisphere(n);
   return cur + PathTraceInner(Ray(p + 1e-4 * n, v), depth + 1);
+#endif
 }
 
 //---------------------------------------------------------------------------
@@ -130,14 +135,11 @@ void PathTrace(const Camera& cam)
 //---------------------------------------------------------------------------
 bool Intersect(const Ray& r, HitRec* hitRec)
 {
-  float tMin = 1e20;
   bool hit = false;
-
   for (Geo* obj : objects)
   {
-    hit |= obj->Intersect(r, &tMin, hitRec);
+    hit |= obj->Intersect(r, hitRec);
   }
-
   return hit;
 }
 
@@ -181,8 +183,10 @@ void RayTrace(const Camera& cam)
         HitRec closest;
         if (Intersect(r, &closest))
         {
-//          Vector3 p = closest.pos;
           Vector3 n = closest.normal;
+
+          // Found intersection, so illuminate via:
+          // L(o) = Le(o) + HEMI(BDRF(o, i) * Li(i) * dot(n, i))
 
           // light ray
 
