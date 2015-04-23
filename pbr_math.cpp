@@ -4,6 +4,21 @@ using namespace std;
 
 namespace pbr
 {
+  //---------------------------------------------------------------------------
+  float Vector3::Max() const
+  {
+    if (x > y && x > z)
+      return x;
+    if (y > z)
+      return y;
+    return z;
+  }
+
+  //---------------------------------------------------------------------------
+  float Vector4::Max() const
+  {
+    return max(x, max(y, max(z, w)));
+  }
 
   //---------------------------------------------------------------------------
   void CreateCoordinateSystem(const Vector3& v1, Vector3* v2, Vector3* v3)

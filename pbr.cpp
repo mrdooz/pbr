@@ -1,12 +1,14 @@
 #include "pbr.hpp"
 #include "pbr_math.hpp"
 
+
 using namespace pbr;
-//using sf::Vector2f;
 
 Vector2u windowSize;
-
 vector<Geo*> objects;
+vector<Geo*> emitters;
+
+void PathTrace(const Camera& cam, Color* buffer);
 
 int MAX_DEPTH = 3;
 
@@ -32,180 +34,34 @@ void Init()
   {
     float angle = i * 2 * Pi / 10;
     Geo* g = new Sphere(Vector3(10 * cosf(angle), 0, 30 + 10 * sinf(angle)), 2);
-    g->material = new DiffuseMaterial(Color(0.1f, 0.2f, 0.4f));
+    if (i & 1)
+      g->material = new DiffuseMaterial(Color(0.1f, 0.2f, 0.4f));
+    else
+      g->material = new DiffuseMaterial(Color(0.1f, 0.2f, 0.4f), 1.f * Color(0.75f, 0.75f, 0.75f));
     objects.push_back(g);
   }
 
   Geo* center = new Sphere(Vector3(0, 0, 30), 5);
 
-  center->material = new DiffuseMaterial(Color(0,0,0), Color(0.75f, 0.75f, 0.75f));
+  center->material = new DiffuseMaterial(Color(0,0.2,0), 100.f * Color(0.75f, 0.75f, 0.75f));
   objects.push_back(center);
 
   Geo* plane = new Plane(Vector3(0,1,0), 0);
   plane->material = new DiffuseMaterial(Color(0.5f, 0.5f, 0.5f));
   objects.push_back(plane);
+
+  for (Geo* g : objects)
+  {
+    if (g->material->emissive.Max() > 0)
+      emitters.push_back(g);
+  }
+
 }
 
 //---------------------------------------------------------------------------
 void Close()
 {
   free(backbuffer);
-}
-
-//---------------------------------------------------------------------------
-Color PathTraceInner(const Ray& r, int depth)
-{
-  // broken :(
-  return Color(0,0,0);
-#if 0
-  HitRec closest;
-
-  for (Geo* obj : objects)
-  {
-    obj->Intersect(r, &closest);
-  }
-
-  if (!closest.geo)
-    return Color(0.1f, 0.1f, 0.1f);
-
-  const Material* m = closest.material;
-  Color cur = (1.0f - depth/MAX_DEPTH) * (m->diffuse + m->emissive);
-
-  if (depth >= MAX_DEPTH)
-  {
-    return cur;
-  }
-
-  Vector3 p = closest.pos;
-  Vector3 n = closest.normal;
-
-  Vector3 v = RayInHemisphere(n);
-  return cur + PathTraceInner(Ray(p + 1e-4 * n, v), depth + 1);
-#endif
-}
-
-//---------------------------------------------------------------------------
-void PathTrace(const Camera& cam)
-{
-  // Note, assumes camera frame is orthonormal
-
-  // Compute size of the image plane. This is the plane at distance d from the
-  // camera that we will shoot rays through (without AA, one ray per pixel).
-  // The size of the image plane depends on 'd' and the camera fov. For the y
-  // size, the aspect ratio also matters.
-
-  float halfWidth = cam.dist * tanf(cam.fov / 2);
-  float imagePlaneWidth = 2 * halfWidth;
-  float imagePlaneHeight = imagePlaneWidth * windowSize.y / windowSize.x;
-
-  float xInc = imagePlaneWidth / (windowSize.x - 1);
-  float yInc = -imagePlaneHeight / (windowSize.y - 1);
-
-  // top left corner
-  Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight/2 * cam.frame.up + cam.dist * cam.frame.dir);
-  Vector3 tmp = p;
-
-  Color* pp = backbuffer->buffer;
-
-  for (u32 y = 0; y < windowSize.y; ++y)
-  {
-    p = tmp;
-    for (u32 x = 0; x < windowSize.x; ++x)
-    {
-      // construct ray from eye pos through the image plane
-      Ray r(cam.frame.origin, Normalize(p - cam.frame.origin));
-
-      Color tmp(0,0,0);
-      u32 iterations = 50;
-      for (u32 i = 0; i < iterations; ++i)
-      {
-        tmp += PathTraceInner(r, 0);
-      }
-
-      *pp++ = tmp/(iterations*MAX_DEPTH);
-
-
-      p.x += xInc;
-    }
-    tmp.y += yInc;
-  }
-
-}
-
-//---------------------------------------------------------------------------
-bool Intersect(const Ray& r, HitRec* hitRec)
-{
-  bool hit = false;
-  for (Geo* obj : objects)
-  {
-    hit |= obj->Intersect(r, hitRec);
-  }
-  return hit;
-}
-
-//---------------------------------------------------------------------------
-void RayTrace(const Camera& cam)
-{
-  // Compute size of the image plane. This is the plane at distance d from the
-  // camera that we will shoot rays through (without AA, one ray per pixel).
-  // The size of the image plane depends on 'd' and the camera fov. For the y
-  // size, the aspect ratio also matters.
-
-  float halfWidth = cam.dist * tanf(cam.fov / 2);
-  float imagePlaneWidth = 2 * halfWidth;
-  float imagePlaneHeight = imagePlaneWidth * windowSize.y / windowSize.x;
-
-  float xInc = imagePlaneWidth / (windowSize.x - 1);
-  float yInc = -imagePlaneHeight / (windowSize.y - 1);
-
-  PoissonSampler sampler;
-  sampler.Init(64);
-
-  // top left corner
-  Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight/2 * cam.frame.up + cam.dist * cam.frame.dir);
-  Vector3 tmp = p;
-
-  Color* pp = backbuffer->buffer;
-
-  for (u32 y = 0; y < windowSize.y; ++y)
-  {
-    p = tmp;
-    for (u32 x = 0; x < windowSize.x; ++x)
-    {
-      Color col(0,0,0);
-      u32 numSamples = 1;
-      for (u32 i = 0; i < numSamples; ++i)
-      {
-        // construct ray from eye pos through the image plane
-        Vector2 ofs = sampler.NextSample();
-        Ray r(cam.frame.origin, Normalize((p + Vector3(ofs.x * xInc, -ofs.y * yInc, 0)) - cam.frame.origin));
-
-        HitRec closest;
-        if (Intersect(r, &closest))
-        {
-          Vector3 n = closest.normal;
-
-          // Found intersection, so illuminate via:
-          // L(o) = Le(o) + HEMI(BDRF(o, i) * Li(i) * dot(n, i))
-
-          // light ray
-
-          const Material* m = closest.material;
-          col += Dot(n, Vector3(0,1,0)) * m->diffuse + m->emissive;
-        }
-        else
-        {
-          col += Color(0.1f, 0.1f, 0.1f);
-        }
-      }
-
-      *pp++ = col / (float)numSamples;
-
-      p.x += xInc;
-    }
-    tmp.y += yInc;
-  }
-
 }
 
 //---------------------------------------------------------------------------
@@ -219,10 +75,10 @@ void BufferToTexture(Buffer* buffer, sf::Texture *texture)
     for (u32 x = 0; x < windowSize.x; ++x)
     {
       const Color &col = *pp++;
-      buf[y * windowSize.x + x].r = (u8)(col.r * 255);
-      buf[y * windowSize.x + x].g = (u8)(col.g * 255);
-      buf[y * windowSize.x + x].b = (u8)(col.b * 255);
-      buf[y * windowSize.x + x].a = (u8)(col.a * 255);
+      buf[y * windowSize.x + x].r = (u8)(Clamp(col.r) * 255);
+      buf[y * windowSize.x + x].g = (u8)(Clamp(col.g) * 255);
+      buf[y * windowSize.x + x].b = (u8)(Clamp(col.b) * 255);
+      buf[y * windowSize.x + x].a = (u8)(Clamp(col.a) * 255);
     }
   }
 
@@ -230,181 +86,14 @@ void BufferToTexture(Buffer* buffer, sf::Texture *texture)
 }
 
 //---------------------------------------------------------------------------
-void DisplaySamples(const vector<Vector2>& samples, sf::Texture* texture)
+bool Intersect(const Ray& r, HitRec* hitRec)
 {
-  int w = windowSize.x;
-  int h = windowSize.y;
-
-  vector<sf::Color> buf(w*h);
-  memset(buf.data(), 0, w*h*4);
-
-  for (const Vector2& v : samples)
+  bool hit = false;
+  for (Geo* obj : objects)
   {
-    // convert from [-1, +1], [-1, +1] to window size
-    int x = w/2 + w/2 * v.x;
-    int y = h/2 + h/2 * v.y;
-
-    buf[y * w + x] = sf::Color::White;
+    hit |= obj->Intersect(r, hitRec);
   }
-  texture->update((const sf::Uint8*)buf.data());
-}
-
-//---------------------------------------------------------------------------
-void CalcDistribution(const vector<Vector2> points, float* mean, float* deviation)
-{
-  u32 numSamples = (u32)points.size();
-  vector<float> distances(points.size());
-  double sum = 0;
-
-  for (u32 i = 0; i < numSamples; ++i)
-  {
-    // find distance to closest point
-    float dist = FLT_MAX;
-    u32 idx;
-    for (u32 j = 0; j < numSamples; ++j)
-    {
-      if (i == j)
-        continue;
-
-      float tmp = (points[i] - points[j]).LengthSquared();
-      if (tmp < dist)
-      {
-        dist = tmp;
-        idx = j;
-      }
-    }
-
-    float d = sqrtf(dist);
-    distances[i] = d;
-    sum += d;
-  }
-
-  // find mean
-  *mean = (float)(sum / numSamples);
-
-  // find standard deviation
-  double d = 0;
-  for (u32 i = 0; i < numSamples; ++i)
-  {
-    float dx = distances[i] - *mean;
-    d += dx * dx;
-  }
-
-  *deviation = sqrtf((float)(d / numSamples));
-}
-
-
-//---------------------------------------------------------------------------
-// Poisson distributed samples, from "Antialiased Images at Low Sampling Densities"
-void PoissonSamples(u32 numSamples, sf::Texture* texture, vector<Vector2f>* samples)
-{
-  int w = windowSize.x;
-  int h = windowSize.y;
-
-  vector<sf::Color> buf(w*h);
-  memset(buf.data(), 0, w*h*4);
-
-  int f = sqrt(numSamples);
-
-  int cellsX = w / f;
-  int cellsY = h / f;
-
-  int subCellsX = cellsX * 4;
-  int subCellsY = cellsY * 4;
-
-  // 2d space is divided into sqrt(numSamples) grid cells, and each grid cell further
-  // divided into 4x4 cells
-  vector<float> d(subCellsX*subCellsY);
-
-  for (u32 i = 1; i < subCellsY; ++i)
-  {
-    for (u32 j = 1; j < subCellsX; ++j)
-    {
-      // calc T value for current cell
-      float t = (4 * d[(j - 1) + (i) * subCellsX] + d[(j - 1) + (i - 1) * subCellsX] + 2 * d[(j) + (i - 1) * subCellsX] + d[(j + 1) + (i - 1) * subCellsX]) / 8;
-      t += randf(1.f / 16 - 1.f / 64, 1.f / 16 + 1.f / 64);
-
-      // determine if the current cell should have a pixel
-      float s = t < 0.5f ? 0 : 1;
-      d[j + i * subCellsX] = t - s;
-
-      if (s > 0)
-      {
-        float x = j * (f/4);
-        float y = i * (f/4);
-        samples->push_back({x, y});
-        buf[y * w + x] = sf::Color::White;
-      }
-    }
-  }
-
-  texture->update((const sf::Uint8*)buf.data());
-}
-
-
-//---------------------------------------------------------------------------
-void RandomSamples(u32 numSamples, sf::Texture* texture, vector<Vector2f>* samples)
-{
-  int w = windowSize.x;
-  int h = windowSize.y;
-
-  vector<sf::Color> buf(w*h);
-  samples->resize(numSamples);
-  memset(buf.data(), 0, w*h*4);
-
-  for (u32 i = 0; i < numSamples; ++i)
-  {
-    float x = rand() % windowSize.x;
-    float y = rand() % windowSize.y;
-    (*samples)[i] = {x, y};
-    buf[y*w+x] = sf::Color::White;
-  }
-
-  texture->update((const sf::Uint8*)buf.data());
-}
-
-//---------------------------------------------------------------------------
-void UniformSamples(u32 numSamples, sf::Texture* texture, vector<Vector2f>* samples)
-{
-  int w = windowSize.x;
-  int h = windowSize.y;
-
-  vector<sf::Color> buf(w*h);
-  samples->resize(numSamples);
-  memset(buf.data(), 0, w*h*4);
-
-  int f = sqrt(numSamples);
-
-  for (u32 i = 0; i < numSamples; ++i)
-  {
-    float x = rand() % windowSize.x;
-    float y = rand() % windowSize.y;
-    x = w / f * (i % f);
-    y = h / f * (i / f);
-    (*samples)[i] = {x, y};
-    buf[y*w+x] = sf::Color::White;
-  }
-
-  texture->update((const sf::Uint8*)buf.data());
-}
-
-//---------------------------------------------------------------------------
-void ShowDistribution(Texture& texture)
-{
-  Sampler* sampler = new PoissonSampler();
-  int s = 1 << 12;
-  sampler->Init(s);
-
-  vector<Vector2> samples;
-  samples.resize(s);
-
-  for (int i = 0; i < s; ++i)
-    samples[i] = sampler->NextSample();
-
-  float mean, dev;
-  CalcDistribution(samples, &mean, &dev);
-  printf("mean: %.3f, stddev: %.3f\n", mean, dev);
-  DisplaySamples(samples, &texture);
+  return hit;
 }
 
 //---------------------------------------------------------------------------
@@ -437,24 +126,20 @@ int main(int argc, char** argv)
   Camera cam;
   cam.fov = DegToRad(60);
   cam.dist = 10;
-  cam.frame = Frame(Vector3(1,0,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(0,5,-10));
+  cam.frame = Frame(
+      Vector3(1,0,0),
+      Vector3(0,1,0),
+      Vector3(0,0,1),
+      Vector3(0,5,-10));
 
   renderWindow.clear();
   renderWindow.display();
 
   renderWindow.clear();
 
-  bool dist = false;
-
-  if (dist)
-  {
-    ShowDistribution(texture);
-  }
-  else
-  {
-    RayTrace(cam);
-    BufferToTexture(backbuffer, &texture);
-  }
+  PathTrace(cam, backbuffer->buffer);
+//  RayTrace(cam);
+  BufferToTexture(backbuffer, &texture);
 
   renderWindow.draw(sprite);
   renderWindow.display();
