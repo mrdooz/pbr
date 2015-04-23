@@ -1,5 +1,8 @@
 #pragma once
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #include <direct.h>
@@ -8,9 +11,9 @@
 #include <unistd.h>
 #include <CoreGraphics/CGDirectDisplay.h>
 #include <vector>
-#include <stdint.h>
 #endif
 
+#include <stdint.h>
 #include <SFML/Graphics.hpp>
 
 typedef uint8_t u8;

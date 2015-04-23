@@ -61,9 +61,7 @@ namespace pbr
   struct Vector3
   {
     Vector3() {}
-    Vector3(float x, float y, float z) : x(x), y(y), z(z) {
-//      assert(!HasNaNs());
-    }
+    Vector3(float x, float y, float z) : x(x), y(y), z(z) { assert(!HasNaNs()); }
 
     float operator[](int i) const { assert(i >= 0 && i < 2); return (&x)[i]; }
     float& operator[](int i) { assert(i >= 0 && i < 2); return (&x)[i]; }
@@ -268,26 +266,30 @@ namespace pbr
   //---------------------------------------------------------------------------
   struct Geo
   {
+    enum class Type { Sphere, Plane };
+    Geo(Type type) : type(type) {}
     virtual ~Geo() {}
     virtual bool Intersect(const Ray& ray, HitRec* rec) = 0;
     Material* material = nullptr;
+    Type type;
   };
 
   //---------------------------------------------------------------------------
   struct Sphere : public Geo
   {
-    Sphere() {}
-    Sphere(const Vector3& c, float r) : center(c), radius(r) {}
+    Sphere() : Geo(Geo::Type::Sphere) {}
+    Sphere(const Vector3& c, float r) : Geo(Geo::Type::Sphere), center(c), radius(r), radiusSquared(r*r) {}
     virtual bool Intersect(const Ray& ray, HitRec* rec);
     Vector3 center;
     float radius;
+    float radiusSquared;
   };
 
   //---------------------------------------------------------------------------
   struct Plane : public Geo
   {
-    Plane() {}
-    Plane(const Vector3& n, float d) : normal(n), distance(d) {}
+    Plane() : Geo(Geo::Type::Plane) {}
+    Plane(const Vector3& n, float d) : Geo(Geo::Type::Plane), normal(n), distance(d) {}
     virtual bool Intersect(const Ray& ray, HitRec* rec);
     Vector3 normal;
     float distance;

@@ -47,6 +47,8 @@ Color Radiance(const Ray& r, int depth, bool emit)
     // sample the emitters
     for (Geo* g : emitters)
     {
+      if (g->type != Geo::Type::Sphere)
+        continue;
       Sphere* s = static_cast<Sphere*>(g);
       Material* sm = s->material;
 
@@ -54,7 +56,9 @@ Color Radiance(const Ray& r, int depth, bool emit)
       // See Realistic Ray Tracing, pp 197
       Vector3 sw = n, su, sv;
       CreateCoordinateSystem(n, &su, &sv);
-      float cos_a_max = sqrtf(1 - s->radius * s->radius / Dot(x - s->center, x - s->center));
+      float dist = (x - s->center).LengthSquared();
+      float cos_a_max = dist <= s->radiusSquared ? 0 : sqrtf(1 - s->radiusSquared / dist);
+//      float cos_a_max = sqrtf(1 - s->radius * s->radius / Dot(x - s->center, x - s->center));
       float eps1 = Randf();
       float eps2 = Randf();
       float cos_a = 1 - eps1 + eps1*cos_a_max;
@@ -69,7 +73,7 @@ Color Radiance(const Ray& r, int depth, bool emit)
         // omega = pdf (rrt, 198)
         float omega = (float)(2 * M_PI*(1 - cos_a_max));
         // 1/pi for brdf (rrt, 165)
-        e = e + (col * sm->emissive * Dot(l, n) * omega) * M_1_PI;
+        e = e + (col * sm->emissive * Dot(l, n) * omega) * (float)M_1_PI;
       }
     }
     return emitCol + e + col * Radiance(Ray(x, d), depth, false);
@@ -114,7 +118,7 @@ void PathTrace(const Camera& cam, Color* buffer)
 
       // TODO: all the samples are uniform over the whole pixel. Try a stratisfied approach
       Color col(0,0,0);
-      u32 numSamples = 4;
+      u32 numSamples = 2;
       for (u32 i = 0; i < numSamples; ++i)
       {
         // construct ray from eye pos through the image plane
