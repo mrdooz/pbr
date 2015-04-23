@@ -16,7 +16,7 @@ Color Radiance(const Ray& r, int depth, bool emit)
     return res;
 
   Vector3 x = hitRec.pos;
-  Vector3 n = hitRec.normal;
+  Vector3 n =  (Dot(r.d, hitRec.normal) < 0 ? 1.f : -1.f) * hitRec.normal;
   Material* mat = hitRec.material;
   Color col = mat->diffuse;
   Color emitCol = emit ? mat->emissive : Color(0,0,0);
@@ -114,7 +114,7 @@ void PathTrace(const Camera& cam, Color* buffer)
 
       // TODO: all the samples are uniform over the whole pixel. Try a stratisfied approach
       Color col(0,0,0);
-      u32 numSamples = 2;
+      u32 numSamples = 4;
       for (u32 i = 0; i < numSamples; ++i)
       {
         // construct ray from eye pos through the image plane
