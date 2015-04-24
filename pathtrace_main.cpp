@@ -7,25 +7,35 @@ extern vector<Geo*> emitters;
 extern bool Intersect(const Ray& r, HitRec* hitRec);
 
 //---------------------------------------------------------------------------
-Color Radiance(const Ray& r, int depth, bool emit)
+Color Radiance(const Ray& r, int depth, bool emit = true)
 {
-  Color res;
+  Color res(0,0,0);
 
   HitRec hitRec;
   if (!Intersect(r, &hitRec))
     return res;
 
   Vector3 x = hitRec.pos;
-  Vector3 n =  (Dot(r.d, hitRec.normal) < 0 ? 1.f : -1.f) * hitRec.normal;
+  Vector3 n = hitRec.normal;
+  Vector3 nl =  (Dot(r.d, n) < 0 ? 1.f : -1.f) * n;
+  Normalize(nl);
   Material* mat = hitRec.material;
-  Color col = mat->diffuse;
+
+  // Choose either diff or spec
+  float diffP = mat->diffuse.Max3();
+  float specP = mat->specular.Max3();
+  float diffR = Randf() * (diffP + specP);
+
+  bool diffuse = diffR < diffP;
+
+  Color col = diffuse ? mat->diffuse : mat->specular;
   Color emitCol = emit ? mat->emissive : Color(0,0,0);
   ++depth;
 
   // Russian roulette based on max specular component
-  float p = mat->specular.Max();
+  float p = mat->specular.Max3();
 
-  if (++depth > 5 || p == 0.f)
+  if (depth > 5 || p == 0.f)
   {
     float r = Randf();
     if (r < p && depth < 20)
@@ -34,13 +44,16 @@ Color Radiance(const Ray& r, int depth, bool emit)
       return emitCol;
   }
 
-  if (mat->diffuse.Max() > 0)
+  if (diffuse)
   {
+    // diffuse
+    diffP = diffP / (diffP + specP);
+
     float r1 = (float)(2 * M_PI*Randf());
     float r2 = Randf();
     float r2s = sqrtf(r2);
-    Vector3 w = n, u, v;
-    CreateCoordinateSystem(n, &u, &v);
+    Vector3 w = nl, u, v;
+    CreateCoordinateSystem(w, &u, &v);
     Vector3 d = Normalize((u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1 - r2)));
 
     Color e(0,0,0);
@@ -54,11 +67,10 @@ Color Radiance(const Ray& r, int depth, bool emit)
 
       // Sample a point on the emitter (this assumes spherical emitters)
       // See Realistic Ray Tracing, pp 197
-      Vector3 sw = n, su, sv;
-      CreateCoordinateSystem(n, &su, &sv);
+      Vector3 sw = Normalize(s->center - x), su, sv;
+      CreateCoordinateSystem(sw, &su, &sv);
       float dist = (x - s->center).LengthSquared();
       float cos_a_max = dist <= s->radiusSquared ? 0 : sqrtf(1 - s->radiusSquared / dist);
-//      float cos_a_max = sqrtf(1 - s->radius * s->radius / Dot(x - s->center, x - s->center));
       float eps1 = Randf();
       float eps2 = Randf();
       float cos_a = 1 - eps1 + eps1*cos_a_max;
@@ -73,13 +85,17 @@ Color Radiance(const Ray& r, int depth, bool emit)
         // omega = pdf (rrt, 198)
         float omega = (float)(2 * M_PI*(1 - cos_a_max));
         // 1/pi for brdf (rrt, 165)
-        e = e + (col * sm->emissive * Dot(l, n) * omega) * (float)M_1_PI;
+        e = e + (col * sm->emissive * Dot(l, nl) * omega) * (float)M_1_PI;
       }
     }
-    return emitCol + e + col * Radiance(Ray(x, d), depth, false);
+    return (emitCol + e + col * Radiance(Ray(x, d), depth, false)) / diffP;
   }
-
-  return Color(1,1,1,1);
+  else
+  {
+    // spec
+    specP = specP / (diffP + specP);
+    return (mat->emissive + col * Radiance(Ray(x, r.d - n * 2 * Dot(n, r.d)), depth)) / specP;
+  }
 }
 
 //---------------------------------------------------------------------------
@@ -100,7 +116,7 @@ void PathTrace(const Camera& cam, Color* buffer)
   float yInc = -imagePlaneHeight / (windowSize.y - 1);
 
   PoissonSampler sampler;
-  sampler.Init(64);
+  sampler.Init(256);
 
   // top left corner
   Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight/2 * cam.frame.up + cam.dist * cam.frame.dir);
@@ -113,17 +129,14 @@ void PathTrace(const Camera& cam, Color* buffer)
     p = tmp;
     for (u32 x = 0; x < windowSize.x; ++x)
     {
-      // construct ray from eye pos through the image plane
-      Ray r(cam.frame.origin, Normalize(p - cam.frame.origin));
-
       // TODO: all the samples are uniform over the whole pixel. Try a stratisfied approach
       Color col(0,0,0);
-      u32 numSamples = 2;
+      u32 numSamples = 256;
       for (u32 i = 0; i < numSamples; ++i)
       {
         // construct ray from eye pos through the image plane
         Vector2 ofs = sampler.NextSample();
-        Ray r(cam.frame.origin, Normalize((p + Vector3(ofs.x * xInc, -ofs.y * yInc, 0)) - cam.frame.origin));
+        Ray r(cam.frame.origin, Normalize((p + Vector3(ofs.x * xInc, ofs.y * yInc, 0)) - cam.frame.origin));
 
         col += Radiance(r, 0, true);
       }

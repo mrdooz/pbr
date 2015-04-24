@@ -159,6 +159,7 @@ namespace pbr
 
     bool HasNaNs() const { return isnan(x) || isnan(y) || isnan(z) || isnan(w); }
     float Max() const;
+    float Max3() const;
     union {
       struct { float x; float y; float z; float w; };
       struct { float r; float g; float b; float a; };
@@ -196,6 +197,7 @@ namespace pbr
   //---------------------------------------------------------------------------
   struct Camera
   {
+    void LookAt(const Vector3& pos, const Vector3& up, const Vector3& target);
     Frame frame;
     float fov;
     // distance from eye pos to image plane
@@ -236,20 +238,16 @@ namespace pbr
         : diffuse(diffuse)
         , specular(specular)
         , emissive(emissive) {}
-    virtual Color BDRF(float cosOut, float cosIn) = 0;
-    virtual Color Emissive(float cosOut) = 0;
     Color emissive;
     Color diffuse;
     Color specular;
   };
 
-  //---------------------------------------------------------------------------
-  struct DiffuseMaterial : public Material
-  {
-    DiffuseMaterial(const Color& diffuse, const Color& emissive = Color(0,0,0)) : Material(diffuse, diffuse, emissive) {}
-    virtual Color BDRF(float cosOut, float cosIn);
-    virtual Color Emissive(float cosOut);
-  };
+//  //---------------------------------------------------------------------------
+//  struct DiffuseMaterial : public Material
+//  {
+//    DiffuseMaterial(const Color& diffuse, const Color& emissive = Color(0,0,0)) : Material(diffuse, diffuse, emissive) {}
+//  };
 
   //---------------------------------------------------------------------------
   struct Geo;

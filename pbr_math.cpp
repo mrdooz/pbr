@@ -5,19 +5,33 @@ using namespace std;
 namespace pbr
 {
   //---------------------------------------------------------------------------
+  void Camera::LookAt(
+      const Vector3& pos,
+      const Vector3& up,
+      const Vector3& target)
+  {
+    Vector3 d = Normalize(target - pos);
+    Vector3 r = Normalize(Cross(up, d));
+    d = Cross(r, up);
+    frame = Frame(r, up, d, pos);
+  }
+
+  //---------------------------------------------------------------------------
   float Vector3::Max() const
   {
-    if (x > y && x > z)
-      return x;
-    if (y > z)
-      return y;
-    return z;
+    return max(x, max(y, z));
   }
 
   //---------------------------------------------------------------------------
   float Vector4::Max() const
   {
     return max(x, max(y, max(z, w)));
+  }
+
+  //---------------------------------------------------------------------------
+  float Vector4::Max3() const
+  {
+    return max(x, max(y, z));
   }
 
   //---------------------------------------------------------------------------
@@ -267,18 +281,6 @@ namespace pbr
     u32 tmp = _idxDisk;
     _idxDisk = (_idxDisk + 1) % _diskSamples.size();
     return _diskSamples[tmp];
-  }
-
-  //---------------------------------------------------------------------------
-  Color DiffuseMaterial::BDRF(float cosOut, float cosIn)
-  {
-    return diffuse / M_PI;
-  }
-
-  //---------------------------------------------------------------------------
-  Color DiffuseMaterial::Emissive(float cosOut)
-  {
-    return emissive;
   }
 
 }

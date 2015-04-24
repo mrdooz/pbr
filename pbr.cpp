@@ -30,29 +30,61 @@ void Init()
 {
   backbuffer = new Buffer(windowSize.x, windowSize.y);
 
-  for (u32 i = 0; i < 10; ++i)
+  float lumScale = 1.f;
+  Color ballDiffuse(0.1f, 0.4f, 0.4f);
+  Color ballSpec(0.2f, 0.2f, 0.2f);
+  Color ballEmit(0.75f, 0.75f, 0.75f);
+
+  Color planeDiffuse(0.5, 0, 0);
+  Color planeSpec(0.1f, 0.1f, 0.1f);
+  ballEmit = lumScale * ballEmit;
+  Color zero(0, 0, 0);
+
+#if 0
+  int numBalls = 10;
+  for (u32 i = 0; i < numBalls; ++i)
   {
-    float angle = i * 2 * Pi / 10;
+    float angle = i * 2 * Pi / numBalls;
     Geo* g = new Sphere(Vector3(10 * cosf(angle), 0, 30 + 10 * sinf(angle)), 2);
     if (i & 1)
-      g->material = new DiffuseMaterial(Color(0.1f, 0.2f, 0.4f));
+      g->material = new Material(ballDiffuse, ballSpec, zero);
     else
-      g->material = new DiffuseMaterial(Color(0.1f, 0.2f, 0.4f), 1.f * Color(0.75f, 0.75f, 0.75f));
+      g->material = new Material(ballDiffuse, ballSpec, ballEmit);
     objects.push_back(g);
   }
 
-  Geo* center = new Sphere(Vector3(0, 0, 30), 5);
+  Geo* center = new Sphere(Vector3(0, 50, 30), 15);
 
-  center->material = new DiffuseMaterial(Color(0,0.2,0), 100.f * Color(0.75f, 0.75f, 0.75f));
+  center->material = new Material(ballDiffuse, zero, ballEmit);
   objects.push_back(center);
+#endif
+
+  {
+    Geo* g = new Sphere(Vector3(-10, 10, 30), 7);
+    g->material = new Material(ballDiffuse, ballSpec, ballEmit);
+    objects.push_back(g);
+  }
+
+  {
+    Geo* g = new Sphere(Vector3(0, 0, 30), 5);
+    g->material = new Material(ballDiffuse, ballSpec, zero);
+    objects.push_back(g);
+  }
+
+  {
+    Geo* g = new Sphere(Vector3(10, 0, 30), 2);
+    g->material = new Material(ballDiffuse, ballSpec, zero);
+    objects.push_back(g);
+  }
+
 
   Geo* plane = new Plane(Vector3(0,1,0), 0);
-  plane->material = new DiffuseMaterial(Color(0.5f, 0.5f, 0.5f));
+  plane->material = new Material(planeDiffuse, planeSpec, zero);
   objects.push_back(plane);
 
   for (Geo* g : objects)
   {
-    if (g->material->emissive.Max() > 0)
+    if (g->material->emissive.Max3() > 0)
       emitters.push_back(g);
   }
 
@@ -75,10 +107,10 @@ void BufferToTexture(Buffer* buffer, sf::Texture *texture)
     for (u32 x = 0; x < windowSize.x; ++x)
     {
       const Color &col = *pp++;
-      buf[y * windowSize.x + x].r = (u8)(Clamp(col.r) * 255);
-      buf[y * windowSize.x + x].g = (u8)(Clamp(col.g) * 255);
-      buf[y * windowSize.x + x].b = (u8)(Clamp(col.b) * 255);
-      buf[y * windowSize.x + x].a = (u8)(Clamp(col.a) * 255);
+      buf[y * windowSize.x + x].r = (u8)(Clamp(powf(col.r, 1/2.2f)) * 255);
+      buf[y * windowSize.x + x].g = (u8)(Clamp(powf(col.g, 1/2.2f)) * 255);
+      buf[y * windowSize.x + x].b = (u8)(Clamp(powf(col.b, 1/2.2f)) * 255);
+      buf[y * windowSize.x + x].a = 255;
     }
   }
 
@@ -112,6 +144,7 @@ int main(int argc, char** argv)
   sf::ContextSettings settings;
   windowSize = Vector2u(8 * width / 10, 8 * height / 10);
   windowSize = { 1024, 768 };
+  windowSize = { 512, 512 };
   RenderWindow renderWindow(sf::VideoMode(windowSize.x, windowSize.y), "...", sf::Style::Default, settings);
 
   Init();
@@ -125,12 +158,8 @@ int main(int argc, char** argv)
 
   Camera cam;
   cam.fov = DegToRad(60);
-  cam.dist = 10;
-  cam.frame = Frame(
-      Vector3(1,0,0),
-      Vector3(0,1,0),
-      Vector3(0,0,1),
-      Vector3(5,10,-10));
+  cam.dist = 1;
+  cam.LookAt(Vector3(5, 5, 10), Vector3(0, 1, 0), Vector3(0, 0, 30));
 
   renderWindow.clear();
   renderWindow.display();
