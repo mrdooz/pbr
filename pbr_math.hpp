@@ -348,7 +348,7 @@ namespace pbr
 
     vector<Vector2> _samples;
     vector<Vector2> _diskSamples;
-    u32 _idx;
+    std::atomic<u32> _idx;
     u32 _idxDisk;
   };
 

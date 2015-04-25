@@ -270,6 +270,7 @@ namespace pbr
   //---------------------------------------------------------------------------
   Vector2 PoissonSampler::NextSample()
   {
+    // todo: make this thread safe
     u32 tmp = _idx;
     _idx = (_idx + 1) % _samples.size();
     return _samples[tmp];

@@ -1,3 +1,4 @@
+#include <tbb/tbb.h>
 #include "pbr_math.hpp"
 
 using namespace pbr;
@@ -63,7 +64,6 @@ Color Radiance(const Ray& r, int depth, bool emit = true)
       if (g->type != Geo::Type::Sphere)
         continue;
       Sphere* s = static_cast<Sphere*>(g);
-      Material* sm = s->material;
 
       // Sample a point on the emitter (this assumes spherical emitters)
       // See Realistic Ray Tracing, pp 197
@@ -82,6 +82,8 @@ Color Radiance(const Ray& r, int depth, bool emit = true)
       HitRec shadowHit;
       if (Intersect(Ray(x, l), &shadowHit) && shadowHit.geo == g)
       {
+        Material* sm = s->material;
+
         // omega = pdf (rrt, 198)
         float omega = (float)(2 * M_PI*(1 - cos_a_max));
         // 1/pi for brdf (rrt, 165)
@@ -97,6 +99,54 @@ Color Radiance(const Ray& r, int depth, bool emit = true)
     return (mat->emissive + col * Radiance(Ray(x, r.d - n * 2 * Dot(n, r.d)), depth)) / specP;
   }
 }
+
+struct ScanlineRender
+{
+  ScanlineRender(const Camera& camera, const Vector3& tmp, float xInc, float yInc, Color* buffer, Vector2* samples)
+      : cam(camera), tmp(tmp), xInc(xInc), yInc(yInc), buffer(buffer), samples(samples)
+  {
+  }
+
+  void operator()(const tbb::blocked_range<int> &r) const
+  {
+    // r contains the scan lines to process
+    Color* pp = &buffer[r.begin() * windowSize.x];
+    Vector3 p;
+    Vector3 tmp2 = tmp;
+    tmp2.y += yInc * r.begin();
+
+    for (int y = r.begin(); y < r.end(); ++y)
+    {
+      p = tmp2;
+
+      for (u32 x = 0; x < windowSize.x; ++x)
+      {
+        // TODO: all the samples are uniform over the whole pixel. Try a stratisfied approach
+        Color col(0,0,0);
+        u32 numSamples = 64;
+        for (u32 i = 0; i < numSamples; ++i)
+        {
+          // construct ray from eye pos through the image plane
+          Vector2 ofs = samples[(sampleIdx++) & 0xff];
+          Ray r(cam.frame.origin, Normalize((p + Vector3(ofs.x * xInc, ofs.y * yInc, 0)) - cam.frame.origin));
+
+          col += Radiance(r, 0);
+        }
+
+        *pp++ = col / (float)numSamples;
+
+        p.x += xInc;
+      }
+    }
+  }
+
+  const Camera& cam;
+  Vector3 tmp;
+  float xInc, yInc;
+  Color* buffer;
+  Vector2* samples;
+  mutable u32 sampleIdx = 0;
+};
 
 //---------------------------------------------------------------------------
 void PathTrace(const Camera& cam, Color* buffer)
@@ -117,34 +167,14 @@ void PathTrace(const Camera& cam, Color* buffer)
 
   PoissonSampler sampler;
   sampler.Init(256);
+  Vector2 samples[256];
+  for (int i = 0; i < 256; ++i)
+    samples[i] = sampler.NextSample();
 
   // top left corner
   Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight/2 * cam.frame.up + cam.dist * cam.frame.dir);
-  Vector3 tmp = p;
 
-  Color* pp = buffer;
-
-  for (u32 y = 0; y < windowSize.y; ++y)
-  {
-    p = tmp;
-    for (u32 x = 0; x < windowSize.x; ++x)
-    {
-      // TODO: all the samples are uniform over the whole pixel. Try a stratisfied approach
-      Color col(0,0,0);
-      u32 numSamples = 256;
-      for (u32 i = 0; i < numSamples; ++i)
-      {
-        // construct ray from eye pos through the image plane
-        Vector2 ofs = sampler.NextSample();
-        Ray r(cam.frame.origin, Normalize((p + Vector3(ofs.x * xInc, ofs.y * yInc, 0)) - cam.frame.origin));
-
-        col += Radiance(r, 0, true);
-      }
-
-      *pp++ = col / (float)numSamples;
-
-      p.x += xInc;
-    }
-    tmp.y += yInc;
-  }
+  tbb::parallel_for(tbb::blocked_range<int> (0, windowSize.y),
+                    ScanlineRender(cam, p, xInc, yInc, buffer, samples),
+                    tbb::auto_partitioner());
 }

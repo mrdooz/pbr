@@ -10,7 +10,6 @@ if (MSVC)
 endif()
 find_package(SFML 2 REQUIRED system window graphics)
 
-include_directories(${SFML_INCLUDE_DIR})
 
 file(GLOB SRC "*.cpp" "*.hpp")
 
@@ -18,6 +17,7 @@ add_executable(${PROJECT_NAME} ${SRC})
 
 if (APPLE)
   # change c++ standard library to libc++ (llvm)
+  include_directories(${SFML_INCLUDE_DIR} "/Users/dooz/projects/tbb43/include" )
   set(COMMON_FLAGS "-Wno-switch-enum")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -v -std=c++11 -stdlib=libc++")
   find_library(APP_SERVICES ApplicationServices)
@@ -31,9 +31,12 @@ if (APPLE)
 
   target_link_libraries(${PROJECT_NAME}
     ${SFML_LIBRARIES}
+    ${SFML_LIBRARIES}
+    "/Users/dooz/projects/tbb43/lib/libtbb.dylib"
     ${APP_SERVICES} )
 else()
   if (MSVC)
+    include_directories(${SFML_INCLUDE_DIR})
     # global all the root level .cpp files
     file(GLOB ROOT_SRC "*.cpp")
 
