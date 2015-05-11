@@ -1,8 +1,9 @@
 #include "pbr_math.hpp"
 
 using namespace pbr;
-extern Vector2u windowSize;
+//extern Vector2u windowSize;
 
+#if 0
 //---------------------------------------------------------------------------
 void DisplaySamples(const vector<Vector2>& samples, sf::Texture* texture)
 {
@@ -180,3 +181,4 @@ void ShowDistribution(Texture& texture)
   printf("mean: %.3f, stddev: %.3f\n", mean, dev);
   DisplaySamples(samples, &texture);
 }
+#endif

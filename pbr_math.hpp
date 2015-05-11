@@ -1,6 +1,7 @@
 #pragma once
 #include <assert.h>
 #include <math.h>
+#include <atomic>
 #include "precompiled.hpp"
 
 namespace pbr
@@ -32,6 +33,10 @@ namespace pbr
   {
     return rad / Pi * 180.0f;
   }
+
+  struct Vector2i { int x, y; };
+  struct Vector2u { u32 x, y; };
+  struct Color32 { u8 r, g, b, a; };
 
   struct Vector2
   {
@@ -129,6 +134,7 @@ namespace pbr
   {
     Vector4() {}
     Vector4(float x, float y, float z, float w = 1) : x(x), y(y), z(z), w(w) { assert(!HasNaNs()); }
+    Vector4(const Vector3& v, float w) : x(v.x), y(v.y), z(v.z), w(w) { assert(!HasNaNs()); }
 
     float operator[](int i) const { assert(i >= 0 && i < 3); return (&x)[i]; }
     float& operator[](int i) { assert(i >= 0 && i < 3); return (&x)[i]; }
@@ -205,31 +211,6 @@ namespace pbr
 
     float lensWidth;
   };
-
-//  //---------------------------------------------------------------------------
-//  struct Color
-//  {
-//    Color() : r(0), g(0), b(0), a(0) {}
-//    Color(float r, float g, float b, float a = 1) : r(r), g(g), b(b), a(a) {}
-//
-//    Color& operator+=(const Color& rhs) { r += rhs.r; g += rhs.g; b += rhs.b; a *= rhs.a; return *this; }
-//    float r, g, b, a;
-//  };
-//
-//  inline Color operator+(const Color& lhs, const Color& rhs)
-//  {
-//    return Color(lhs.r+rhs.r, lhs.g+rhs.g, lhs.b+rhs.b, lhs.a*rhs.a);
-//  }
-//
-//  inline Color operator/(const Color& c, float s)
-//  {
-//    return Color(c.r/s, c.g/s, c.b/s, c.a);
-//  }
-//
-//  inline Color operator*(float s, const Color& c)
-//  {
-//    return Color(c.r*s, c.g*s, c.b*s, c.a);
-//  }
 
   //---------------------------------------------------------------------------
   struct Material
@@ -352,5 +333,12 @@ namespace pbr
     u32 _idxDisk;
   };
 
+  //---------------------------------------------------------------------------
+  struct IsectTri
+  {
+    Vector3 p0, p1, p2;
+  };
+
+  bool RayTriIntersect(const Ray& ray, const IsectTri& tri, float* t, float* u, float* v);
 
 }

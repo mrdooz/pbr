@@ -11,7 +11,7 @@ endif()
 find_package(SFML 2 REQUIRED system window graphics)
 
 
-file(GLOB SRC "*.cpp" "*.hpp")
+file(GLOB SRC "*.cpp" "*.hpp" "imgui/*.cpp" "imgui/*.h")
 
 add_executable(${PROJECT_NAME} ${SRC})
 
@@ -36,7 +36,7 @@ if (APPLE)
     ${APP_SERVICES} )
 else()
   if (MSVC)
-    include_directories(${SFML_INCLUDE_DIR})
+    include_directories(${SFML_INCLUDE_DIR} "c:/projects/tbb43/include")
     # global all the root level .cpp files
     file(GLOB ROOT_SRC "*.cpp")
 
@@ -54,8 +54,12 @@ else()
     endforeach()
 
     target_link_libraries(${PROJECT_NAME}
-      debug ${SFML_GRAPHICS_LIBRARY_DEBUG} optimized ${SFML_GRAPHICS_LIBRARY_RELEASE}
-      debug ${SFML_SYSTEM_LIBRARY_DEBUG} optimized ${SFML_SYSTEM_LIBRARY_RELEASE}
-      debug ${SFML_WINDOW_LIBRARY_DEBUG} optimized ${SFML_WINDOW_LIBRARY_RELEASE})
+      debug "c:/projects/tbb43/lib/intel64/vc12/tbb_debug.lib" optimized "c:/projects/tbb43/lib/intel64/vc12/tbb.lib"
+      "glfw3/glfw3dll"
+      "opengl32"
+    )
+      #debug ${SFML_GRAPHICS_LIBRARY_DEBUG} optimized ${SFML_GRAPHICS_LIBRARY_RELEASE}
+      #debug ${SFML_SYSTEM_LIBRARY_DEBUG} optimized ${SFML_SYSTEM_LIBRARY_RELEASE}
+      #debug ${SFML_WINDOW_LIBRARY_DEBUG} optimized ${SFML_WINDOW_LIBRARY_RELEASE})
   endif(MSVC)
 endif()

@@ -1,16 +1,25 @@
 #include <tbb/tbb.h>
 #include "pbr_math.hpp"
+#include "pbr.hpp"
 
 using namespace pbr;
 extern Vector2u windowSize;
 extern vector<Geo*> objects;
 extern vector<Geo*> emitters;
+extern vector<IsectTri> tris;
 extern bool Intersect(const Ray& r, HitRec* hitRec);
 
 //---------------------------------------------------------------------------
 Color Radiance(const Ray& r, int depth, bool emit = true)
 {
   Color res(0,0,0);
+
+  for (const IsectTri& tri : tris)
+  {
+    float t, u, v;
+    if (RayTriIntersect(r, tri, &t, &u, &v))
+      return Color(0.5f, 0.5f, 0.5f);
+  }
 
   HitRec hitRec;
   if (!Intersect(r, &hitRec))
@@ -102,13 +111,22 @@ Color Radiance(const Ray& r, int depth, bool emit = true)
 
 struct ScanlineRender
 {
-  ScanlineRender(const Camera& camera, const Vector3& tmp, float xInc, float yInc, Color* buffer, Vector2* samples)
-      : cam(camera), tmp(tmp), xInc(xInc), yInc(yInc), buffer(buffer), samples(samples)
+  ScanlineRender(
+    const Camera& camera,
+    const Vector3& tmp,
+    float xInc,
+    float yInc, Color* buffer,
+    const RenderSettings& settings,
+    Vector2* samples)
+      : cam(camera), tmp(tmp), xInc(xInc), yInc(yInc), buffer(buffer), settings(settings), samples(samples)
   {
   }
 
   void operator()(const tbb::blocked_range<int> &r) const
   {
+    u32 numSamples = settings.numSamples;
+    numSamples = 1;
+
     // r contains the scan lines to process
     Color* pp = &buffer[r.begin() * windowSize.x];
     Vector3 p;
@@ -123,7 +141,6 @@ struct ScanlineRender
       {
         // TODO: all the samples are uniform over the whole pixel. Try a stratisfied approach
         Color col(0,0,0);
-        u32 numSamples = 64;
         for (u32 i = 0; i < numSamples; ++i)
         {
           // construct ray from eye pos through the image plane
@@ -145,19 +162,17 @@ struct ScanlineRender
   float xInc, yInc;
   Color* buffer;
   Vector2* samples;
+  RenderSettings settings;
   mutable u32 sampleIdx = 0;
 };
 
 //---------------------------------------------------------------------------
-void PathTrace(const Camera& cam, Color* buffer)
+void PathTrace(const Camera& cam, const RenderSettings& settings, Color* buffer)
 {
-  // Note, assumes camera frame is orthonormal
-
   // Compute size of the image plane. This is the plane at distance d from the
   // camera that we will shoot rays through (without AA, one ray per pixel).
   // The size of the image plane depends on 'd' and the camera fov. For the y
   // size, the aspect ratio also matters.
-
   float halfWidth = cam.dist * tanf(cam.fov / 2);
   float imagePlaneWidth = 2 * halfWidth;
   float imagePlaneHeight = imagePlaneWidth * windowSize.y / windowSize.x;
@@ -172,9 +187,9 @@ void PathTrace(const Camera& cam, Color* buffer)
     samples[i] = sampler.NextSample();
 
   // top left corner
-  Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight/2 * cam.frame.up + cam.dist * cam.frame.dir);
+  Vector3 p(cam.frame.origin - halfWidth * cam.frame.right + imagePlaneHeight / 2 * cam.frame.up + cam.dist * cam.frame.dir);
 
-  tbb::parallel_for(tbb::blocked_range<int> (0, windowSize.y),
-                    ScanlineRender(cam, p, xInc, yInc, buffer, samples),
-                    tbb::auto_partitioner());
+  tbb::parallel_for(tbb::blocked_range<int>(0, windowSize.y),
+    ScanlineRender(cam, p, xInc, yInc, buffer, settings, samples),
+    tbb::auto_partitioner());
 }

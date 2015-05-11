@@ -208,7 +208,7 @@ namespace pbr
         t += randf(1.f / 16 - 1.f / 64, 1.f / 16 + 1.f / 64);
 
         // determine if the current cell should have a pixel
-        float s = t < 0.5f ? 0 : 1;
+        float s = t < 0.5f ? 0.f : 1.f;
         d[j + i * subCellsX] = t - s;
 
         if (s > 0)
@@ -282,6 +282,45 @@ namespace pbr
     u32 tmp = _idxDisk;
     _idxDisk = (_idxDisk + 1) % _diskSamples.size();
     return _diskSamples[tmp];
+  }
+
+  //---------------------------------------------------------------------------
+  bool RayTriIntersect(const Ray& ray, const IsectTri& tri, float* t, float* u, float* v)
+  {
+    // Moller/Trombore
+
+    const float eps = -1.e5;
+
+    const Vector3& d = ray.d;
+    const Vector3& o = ray.o;
+
+    Vector3 e1 = tri.p1 - tri.p0;
+    Vector3 e2 = tri.p2 - tri.p0;
+
+    // note, this can be written as e1 . (rd x e2 ) = rd . (e2 x e1), so we
+    // can precompute the cross product
+    Vector3 q = Cross(d, e2);
+    float a = Dot(e1, q);
+
+    if (abs(a) <= eps)
+      return false;
+
+    float f = 1 / a;
+    Vector3 s = o - tri.p0;
+
+    *u = f * Dot(s, q);
+    if (*u < 0.f)
+      return false;
+
+    Vector3 r = Cross(s, e1);
+
+    *v = f * Dot(d, r);
+    if (*v < 0.f || *u + *v > 1.f)
+      return false;
+
+    *t = f * Dot(e2, r);
+
+    return true;
   }
 
 }

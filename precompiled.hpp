@@ -14,7 +14,9 @@
 #endif
 
 #include <stdint.h>
-#include <SFML/Graphics.hpp>
+#include <algorithm>
+#include <vector>
+//#include <SFML/Graphics.hpp>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -28,14 +30,14 @@ typedef int64_t s64;
 
 namespace pbr
 {
-  using sf::RenderWindow;
-  using sf::RenderTexture;
-  using sf::Sprite;
-  using sf::Texture;
-  using sf::Event;
-  using sf::Vector2f;
-  using sf::Vector2i;
-  using sf::Vector2u;
+//   using sf::RenderWindow;
+//   using sf::RenderTexture;
+//   using sf::Sprite;
+//   using sf::Texture;
+//   using sf::Event;
+//   using sf::Vector2f;
+//   using sf::Vector2i;
+//   using sf::Vector2u;
 
   using std::min;
   using std::max;
