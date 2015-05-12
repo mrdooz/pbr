@@ -1,4 +1,8 @@
 #pragma once
+#include <vector>
+#include <stdint.h>
+
+typedef uint32_t u32;
 
 using namespace std;
 

@@ -9,7 +9,7 @@ if (MSVC)
   set(SFML_STATIC_LIBRARIES TRUE)
 endif()
 find_package(SFML 2 REQUIRED system window graphics)
-
+find_package(OpenGL)
 
 file(GLOB SRC "*.cpp" "*.hpp" "imgui/*.cpp" "imgui/*.h")
 
@@ -32,7 +32,9 @@ if (APPLE)
   target_link_libraries(${PROJECT_NAME}
     ${SFML_LIBRARIES}
     ${SFML_LIBRARIES}
+    ${OPENGL_LIBRARIES}
     "/Users/dooz/projects/tbb43/lib/libtbb.dylib"
+    "/usr/local/Cellar/glfw3/3.0.4/lib/libglfw3.dylib"
     ${APP_SERVICES} )
 else()
   if (MSVC)
