@@ -18,49 +18,67 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
-  inline float DegToRad(float deg)
-  {
-    return deg / 180.0f * Pi;
-  }
+  inline float DegToRad(float deg) { return deg / 180.0f * Pi; }
 
-  inline float Clamp(float v)
-  {
-    return min(1.f, max(0.f, v));
-  }
+  inline float Clamp(float v) { return min(1.f, max(0.f, v)); }
 
   //---------------------------------------------------------------------------
-  inline float RadToDeg(float rad)
-  {
-    return rad / Pi * 180.0f;
-  }
+  inline float RadToDeg(float rad) { return rad / Pi * 180.0f; }
 
-  struct Vector2i { int x, y; };
-  struct Vector2u { u32 x, y; };
-  struct Color32 { u8 r, g, b, a; };
+  struct Vector2i
+  {
+    int x, y;
+  };
+  struct Vector2u
+  {
+    u32 x, y;
+  };
+  struct Color32
+  {
+    u8 r, g, b, a;
+  };
 
   struct Vector2
   {
     Vector2() {}
     Vector2(float x, float y) : x(x), y(y) {}
 
-    float operator[](int i) const { assert(i == 0 || i == 1); return (&x)[i]; }
-    float& operator[](int i) { assert(i == 0 || i == 1); return (&x)[i]; }
+    float operator[](int i) const
+    {
+      assert(i == 0 || i == 1);
+      return (&x)[i];
+    }
+    float& operator[](int i)
+    {
+      assert(i == 0 || i == 1);
+      return (&x)[i];
+    }
 
-    Vector2 operator+(const Vector2& rhs) const { return Vector2(x+rhs.x, y+rhs.y); }
-    Vector2& operator+=(const Vector2& rhs) { x += rhs.x; y += rhs.y; return *this; }
+    Vector2 operator+(const Vector2& rhs) const { return Vector2(x + rhs.x, y + rhs.y); }
+    Vector2& operator+=(const Vector2& rhs)
+    {
+      x += rhs.x;
+      y += rhs.y;
+      return *this;
+    }
 
-    Vector2 operator-(const Vector2& rhs) const { return Vector2(x-rhs.x, y-rhs.y); }
-    Vector2& operator-=(const Vector2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+    Vector2 operator-(const Vector2& rhs) const { return Vector2(x - rhs.x, y - rhs.y); }
+    Vector2& operator-=(const Vector2& rhs)
+    {
+      x -= rhs.x;
+      y -= rhs.y;
+      return *this;
+    }
 
-    Vector2 operator*(float f) const { return Vector2(f*x, f*y); }
+    Vector2 operator*(float f) const { return Vector2(f * x, f * y); }
 
-    float LengthSquared() const { return x*x + y*y; }
+    float LengthSquared() const { return x * x + y * y; }
     float Length() const { return sqrtf(LengthSquared()); }
 
     float x, y;
   };
 
-  inline Vector2 operator*(float f, const Vector2& v) { return v*f; }
+  inline Vector2 operator*(float f, const Vector2& v) { return v * f; }
 
   //---------------------------------------------------------------------------
   struct Vector3
@@ -68,27 +86,53 @@ namespace pbr
     Vector3() {}
     Vector3(float x, float y, float z) : x(x), y(y), z(z) { assert(!HasNaNs()); }
 
-    float operator[](int i) const { assert(i >= 0 && i < 2); return (&x)[i]; }
-    float& operator[](int i) { assert(i >= 0 && i < 2); return (&x)[i]; }
-
-    Vector3 operator+(const Vector3& rhs) const { return Vector3(x+rhs.x, y+rhs.y, z+rhs.z); }
-    Vector3& operator+=(const Vector3& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
-
-    Vector3 operator-(const Vector3& rhs) const { return Vector3(x-rhs.x, y-rhs.y, z-rhs.z); }
-    Vector3& operator-=(const Vector3& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
-
-    Vector3 operator*(float f) const { return Vector3(f*x, f*y, f*z); }
-    Vector3& operator*=(float f) { x *= f; y *= f; z *= f; return *this; }
-
-    Vector3 operator/(float f) const
-    { 
-      if (f == 0) 
-        return Vector3(0,0,0); 
-      float r = 1/f; 
-      return Vector3(r*x, r*y, r*z); 
+    float operator[](int i) const
+    {
+      assert(i >= 0 && i < 2);
+      return (&x)[i];
+    }
+    float& operator[](int i)
+    {
+      assert(i >= 0 && i < 2);
+      return (&x)[i];
     }
 
-    Vector3& operator/=(float f) 
+    Vector3 operator+(const Vector3& rhs) const { return Vector3(x + rhs.x, y + rhs.y, z + rhs.z); }
+    Vector3& operator+=(const Vector3& rhs)
+    {
+      x += rhs.x;
+      y += rhs.y;
+      z += rhs.z;
+      return *this;
+    }
+
+    Vector3 operator-(const Vector3& rhs) const { return Vector3(x - rhs.x, y - rhs.y, z - rhs.z); }
+    Vector3& operator-=(const Vector3& rhs)
+    {
+      x -= rhs.x;
+      y -= rhs.y;
+      z -= rhs.z;
+      return *this;
+    }
+
+    Vector3 operator*(float f) const { return Vector3(f * x, f * y, f * z); }
+    Vector3& operator*=(float f)
+    {
+      x *= f;
+      y *= f;
+      z *= f;
+      return *this;
+    }
+
+    Vector3 operator/(float f) const
+    {
+      if (f == 0)
+        return Vector3(0, 0, 0);
+      float r = 1 / f;
+      return Vector3(r * x, r * y, r * z);
+    }
+
+    Vector3& operator/=(float f)
     {
       *this = *this / f;
       return *this;
@@ -96,7 +140,7 @@ namespace pbr
 
     Vector3 operator-() const { return Vector3(-x, -y, -z); }
 
-    float LengthSquared() const { return x*x + y*y + z*z; }
+    float LengthSquared() const { return x * x + y * y + z * z; }
     float Length() const { return sqrtf(LengthSquared()); }
 
     bool HasNaNs() const { return isnan(x) || isnan(y) || isnan(z); }
@@ -104,9 +148,8 @@ namespace pbr
     float x, y, z;
   };
 
-
   //---------------------------------------------------------------------------
-  inline Vector3 operator*(float f, const Vector3& v) { return v*f; }
+  inline Vector3 operator*(float f, const Vector3& v) { return v * f; }
 
   inline float Dot(const Vector3& lhs, const Vector3& rhs)
   {
@@ -115,17 +158,12 @@ namespace pbr
 
   inline Vector3 Cross(const Vector3& lhs, const Vector3& rhs)
   {
-    return Vector3(
-      lhs.y * rhs.z - lhs.z * rhs.y,
-      lhs.z * rhs.x - lhs.x * rhs.z,
-      lhs.x * rhs.y - lhs.y * rhs.x
-      );
+    return Vector3(lhs.y * rhs.z - lhs.z * rhs.y,
+        lhs.z * rhs.x - lhs.x * rhs.z,
+        lhs.x * rhs.y - lhs.y * rhs.x);
   }
 
-  inline float Sq(float x)
-  {
-    return x * x;
-  }
+  inline float Sq(float x) { return x * x; }
 
   inline Vector3 Normalize(const Vector3& v) { return v / v.Length(); }
 
@@ -136,24 +174,59 @@ namespace pbr
     Vector4(float x, float y, float z, float w = 1) : x(x), y(y), z(z), w(w) { assert(!HasNaNs()); }
     Vector4(const Vector3& v, float w) : x(v.x), y(v.y), z(v.z), w(w) { assert(!HasNaNs()); }
 
-    float operator[](int i) const { assert(i >= 0 && i < 3); return (&x)[i]; }
-    float& operator[](int i) { assert(i >= 0 && i < 3); return (&x)[i]; }
+    float operator[](int i) const
+    {
+      assert(i >= 0 && i < 3);
+      return (&x)[i];
+    }
+    float& operator[](int i)
+    {
+      assert(i >= 0 && i < 3);
+      return (&x)[i];
+    }
 
-    Vector4 operator+(const Vector4& rhs) const { return Vector4(x+rhs.x, y+rhs.y, z+rhs.z, w+rhs.w); }
-    Vector4& operator+=(const Vector4& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; w += rhs.w; return *this; }
+    Vector4 operator+(const Vector4& rhs) const
+    {
+      return Vector4(x + rhs.x, y + rhs.y, z + rhs.z, w + rhs.w);
+    }
+    Vector4& operator+=(const Vector4& rhs)
+    {
+      x += rhs.x;
+      y += rhs.y;
+      z += rhs.z;
+      w += rhs.w;
+      return *this;
+    }
 
-    Vector4 operator-(const Vector4& rhs) const { return Vector4(x-rhs.x, y-rhs.y, z-rhs.z, w-rhs.w); }
-    Vector4& operator-=(const Vector4& rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; w -= rhs.w; return *this; }
+    Vector4 operator-(const Vector4& rhs) const
+    {
+      return Vector4(x - rhs.x, y - rhs.y, z - rhs.z, w - rhs.w);
+    }
+    Vector4& operator-=(const Vector4& rhs)
+    {
+      x -= rhs.x;
+      y -= rhs.y;
+      z -= rhs.z;
+      w -= rhs.w;
+      return *this;
+    }
 
-    Vector4 operator*(float f) const { return Vector4(f*x, f*y, f*z, f*w); }
-    Vector4& operator*=(float f) { x *= f; y *= f; z *= f; w *= f; return *this; }
+    Vector4 operator*(float f) const { return Vector4(f * x, f * y, f * z, f * w); }
+    Vector4& operator*=(float f)
+    {
+      x *= f;
+      y *= f;
+      z *= f;
+      w *= f;
+      return *this;
+    }
 
     Vector4 operator/(float f) const
     {
       if (f == 0)
-        return Vector4(0,0,0, 0);
-      float r = 1/f;
-      return Vector4(r*x, r*y, r*z, r*w);
+        return Vector4(0, 0, 0, 0);
+      float r = 1 / f;
+      return Vector4(r * x, r * y, r * z, r * w);
     }
 
     Vector4& operator/=(float f)
@@ -162,17 +235,29 @@ namespace pbr
       return *this;
     }
 
-
     bool HasNaNs() const { return isnan(x) || isnan(y) || isnan(z) || isnan(w); }
     float Max() const;
     float Max3() const;
-    union {
-      struct { float x; float y; float z; float w; };
-      struct { float r; float g; float b; float a; };
+    union
+    {
+      struct
+      {
+        float x;
+        float y;
+        float z;
+        float w;
+      };
+      struct
+      {
+        float r;
+        float g;
+        float b;
+        float a;
+      };
     };
   };
 
-  inline Vector4 operator*(float f, const Vector4& v) { return v*f; }
+  inline Vector4 operator*(float f, const Vector4& v) { return v * f; }
   inline Vector4 operator*(const Vector4& lhs, const Vector4& rhs)
   {
     return Vector4(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w);
@@ -183,21 +268,33 @@ namespace pbr
   //---------------------------------------------------------------------------
   struct Ray
   {
-    Ray(const Vector3& o, const Vector3& d) : o(o), d(d), minT(0.f), maxT(0.f), time(0.f), depth(0) {}
+    Ray(const Vector3& o, const Vector3& d) : o(o), d(d) {}
     Vector3 o;
     Vector3 d;
-    float minT, maxT;
-    float time;
-    int depth;
+    float minT = 0;
+    float maxT = 0;
+    float time = 0;
+    int depth = 0;
   };
 
   //---------------------------------------------------------------------------
   struct Frame
   {
     Frame() {}
-    Frame(const Vector3& r, const Vector3& u, const Vector3& d, const Vector3& o) : right(r), up(u), dir(d), origin(o) {}
+    Frame(const Vector3& r, const Vector3& u, const Vector3& d, const Vector3& o)
+        : right(r), up(u), dir(d), origin(o)
+    {
+    }
+      
+    Frame(const Vector3& a, const Vector3& b)
+    {
+      right = Normalize(a);
+      dir = Normalize(Cross(a, b));
+      up = Cross(dir, right);
+    }
+
     Vector3 right, up, dir;
-    Vector3 origin;
+    Vector3 origin = Vector3{0,0,0};
   };
 
   //---------------------------------------------------------------------------
@@ -216,19 +313,20 @@ namespace pbr
   struct Material
   {
     Material(const Color& diffuse, const Color& specular, const Color& emissive)
-        : diffuse(diffuse)
-        , specular(specular)
-        , emissive(emissive) {}
+        : diffuse(diffuse), specular(specular), emissive(emissive)
+    {
+    }
     Color emissive;
     Color diffuse;
     Color specular;
   };
 
-//  //---------------------------------------------------------------------------
-//  struct DiffuseMaterial : public Material
-//  {
-//    DiffuseMaterial(const Color& diffuse, const Color& emissive = Color(0,0,0)) : Material(diffuse, diffuse, emissive) {}
-//  };
+  //  //---------------------------------------------------------------------------
+  //  struct DiffuseMaterial : public Material
+  //  {
+  //    DiffuseMaterial(const Color& diffuse, const Color& emissive = Color(0,0,0)) :
+  //    Material(diffuse, diffuse, emissive) {}
+  //  };
 
   //---------------------------------------------------------------------------
   struct Geo;
@@ -245,7 +343,11 @@ namespace pbr
   //---------------------------------------------------------------------------
   struct Geo
   {
-    enum class Type { Sphere, Plane };
+    enum class Type
+    {
+      Sphere,
+      Plane
+    };
     Geo(Type type) : type(type) {}
     virtual ~Geo() {}
     virtual bool Intersect(const Ray& ray, HitRec* rec) = 0;
@@ -257,7 +359,10 @@ namespace pbr
   struct Sphere : public Geo
   {
     Sphere() : Geo(Geo::Type::Sphere) {}
-    Sphere(const Vector3& c, float r) : Geo(Geo::Type::Sphere), center(c), radius(r), radiusSquared(r*r) {}
+    Sphere(const Vector3& c, float r)
+        : Geo(Geo::Type::Sphere), center(c), radius(r), radiusSquared(r * r)
+    {
+    }
     virtual bool Intersect(const Ray& ray, HitRec* rec);
     Vector3 center;
     float radius;
@@ -284,16 +389,13 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
-  inline float Randf()
-  {
-    return rand() / (float)RAND_MAX;
-  }
+  inline float Randf() { return rand() / (float)RAND_MAX; }
 
   //---------------------------------------------------------------------------
   struct Sampler
   {
     virtual ~Sampler() {}
-    virtual void Init(u32 numSamples) {};
+    virtual void Init(u32 numSamples){};
     virtual Vector2 NextSample() = 0;
     virtual Vector2 NextDiskSample() = 0;
   };
@@ -340,5 +442,4 @@ namespace pbr
   };
 
   bool RayTriIntersect(const Ray& ray, const IsectTri& tri, float* t, float* u, float* v);
-
 }

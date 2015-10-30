@@ -13,6 +13,7 @@ vector<Geo*> objects;
 vector<Geo*> emitters;
 
 void PathTrace(const Camera& cam, const RenderSettings& settings, Color* buffer);
+void RayTrace(const Camera& cam, Color* buffer);
 
 int MAX_DEPTH = 3;
 
@@ -273,7 +274,8 @@ int main(int, char**)
     ImGui::DragInt("samples", &settings.numSamples);
     if (ImGui::Button("GO!"))
     {
-      PathTrace(cam, settings, backbuffer->buffer);
+      //PathTrace(cam, settings, backbuffer->buffer);
+      RayTrace(cam, backbuffer->buffer);
     }
 
     ImGui::Image((ImTextureID)textureId, ImVec2((float)windowSize.x, (float)windowSize.y));

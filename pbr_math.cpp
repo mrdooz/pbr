@@ -5,10 +5,7 @@ using namespace std;
 namespace pbr
 {
   //---------------------------------------------------------------------------
-  void Camera::LookAt(
-      const Vector3& pos,
-      const Vector3& up,
-      const Vector3& target)
+  void Camera::LookAt(const Vector3& pos, const Vector3& up, const Vector3& target)
   {
     Vector3 d = Normalize(target - pos);
     Vector3 r = Normalize(Cross(up, d));
@@ -17,22 +14,13 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
-  float Vector3::Max() const
-  {
-    return max(x, max(y, z));
-  }
+  float Vector3::Max() const { return max(x, max(y, z)); }
 
   //---------------------------------------------------------------------------
-  float Vector4::Max() const
-  {
-    return max(x, max(y, max(z, w)));
-  }
+  float Vector4::Max() const { return max(x, max(y, max(z, w))); }
 
   //---------------------------------------------------------------------------
-  float Vector4::Max3() const
-  {
-    return max(x, max(y, z));
-  }
+  float Vector4::Max3() const { return max(x, max(y, z)); }
 
   //---------------------------------------------------------------------------
   void CreateCoordinateSystem(const Vector3& v1, Vector3* v2, Vector3* v3)
@@ -42,13 +30,13 @@ namespace pbr
     if (fabsf(v1.x) > fabs(v1.y))
     {
       // zero v1.y
-      float invLen = 1.0f / sqrtf(v1.x*v1.x + v1.z*v1.z);
+      float invLen = 1.0f / sqrtf(v1.x * v1.x + v1.z * v1.z);
       *v2 = Vector3(-v1.z * invLen, 0, v1.x * invLen);
     }
     else
     {
       // zero v1.x
-      float invLen = 1.0f / sqrtf(v1.y*v1.y + v1.z*v1.z);
+      float invLen = 1.0f / sqrtf(v1.y * v1.y + v1.z * v1.z);
       *v2 = Vector3(0, v1.z * invLen, -v1.y * invLen);
     }
 
@@ -58,7 +46,8 @@ namespace pbr
   //---------------------------------------------------------------------------
   Vector3 RayInHemisphere(const Vector3& n)
   {
-    while (true) {
+    while (true)
+    {
       float x = -1 + 2 * Randf();
       float y = -1 + 2 * Randf();
       float z = -1 + 2 * Randf();
@@ -125,10 +114,7 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
-  Vector2 RandomSampler::NextSample()
-  {
-    return Vector2(randf(-1.f, 1.f), randf(-1.f, 1.f));
-  }
+  Vector2 RandomSampler::NextSample() { return Vector2(randf(-1.f, 1.f), randf(-1.f, 1.f)); }
 
   //---------------------------------------------------------------------------
   Vector2 RandomSampler::NextDiskSample()
@@ -143,10 +129,7 @@ namespace pbr
   }
 
   //---------------------------------------------------------------------------
-  UniformSampler::UniformSampler()
-      : _idx(0)
-  {
-  }
+  UniformSampler::UniformSampler() : _idx(0) {}
 
   void UniformSampler::Init(u32 numSamples)
   {
@@ -176,18 +159,10 @@ namespace pbr
     return _samples[tmp];
   }
 
-  Vector2 UniformSampler::NextDiskSample()
-  {
-    return Vector2(0,0);
-  }
-
+  Vector2 UniformSampler::NextDiskSample() { return Vector2(0, 0); }
 
   //---------------------------------------------------------------------------
-  PoissonSampler::PoissonSampler()
-      : _idx(0)
-      , _idxDisk(0)
-  {
-  }
+  PoissonSampler::PoissonSampler() : _idx(0), _idxDisk(0) {}
 
   //---------------------------------------------------------------------------
   void PoissonSampler::Init(u32 numSamples)
@@ -197,14 +172,17 @@ namespace pbr
 
     // 2d space is divided into sqrt(numSamples) grid cells, and each grid cell further
     // divided into 4x4 cells
-    vector<float> d(subCellsX*subCellsY);
+    vector<float> d(subCellsX * subCellsY);
 
     for (s64 i = 1; i < subCellsY; ++i)
     {
       for (s64 j = 1; j < subCellsX; ++j)
       {
         // calc T value for current cell
-        float t = (4 * d[(j - 1) + (i) * subCellsX] + d[(j - 1) + (i - 1) * subCellsX] + 2 * d[(j) + (i - 1) * subCellsX] + d[(j + 1) + (i - 1) * subCellsX]) / 8;
+        float t = (4 * d[(j - 1) + (i)*subCellsX] + d[(j - 1) + (i - 1) * subCellsX]
+                      + 2 * d[(j) + (i - 1) * subCellsX]
+                      + d[(j + 1) + (i - 1) * subCellsX])
+                  / 8;
         t += randf(1.f / 16 - 1.f / 64, 1.f / 16 + 1.f / 64);
 
         // determine if the current cell should have a pixel
@@ -213,8 +191,8 @@ namespace pbr
 
         if (s > 0)
         {
-          float x = -1 + 2 * ((j-1) / (float)(subCellsX-2));
-          float y = -1 + 2 * ((i-1) / (float)(subCellsY-2));
+          float x = -1 + 2 * ((j - 1) / (float)(subCellsX - 2));
+          float y = -1 + 2 * ((i - 1) / (float)(subCellsY - 2));
           _samples.push_back({x, y});
         }
       }
@@ -238,7 +216,7 @@ namespace pbr
         if (s.x > s.y)
         {
           r = s.x;
-          phi = s.y  / s.x;
+          phi = s.y / s.x;
         }
         else
         {
@@ -322,5 +300,4 @@ namespace pbr
 
     return true;
   }
-
 }
