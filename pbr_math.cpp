@@ -280,7 +280,7 @@ namespace pbr
     Vector3 q = Cross(d, e2);
     float a = Dot(e1, q);
 
-    if (abs(a) <= eps)
+    if (fabs(a) <= eps)
       return false;
 
     float f = 1 / a;

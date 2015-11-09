@@ -12,7 +12,7 @@ static bool LoadFile(const char* filename, vector<char>* buf)
     return false;
 
   fseek(f, 0, SEEK_END);
-  u32 len = ftell(f);
+  u32 len = (u32)ftell(f);
   buf->resize(len);
   fseek(f, 0, SEEK_SET);
   fread(buf->data(), 1, len, f);

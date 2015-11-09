@@ -1,3 +1,4 @@
+#if 0
 #include <tbb/tbb.h>
 #include "pbr_math.hpp"
 #include "pbr.hpp"
@@ -193,3 +194,4 @@ void PathTrace(const Camera& cam, const RenderSettings& settings, Color* buffer)
     ScanlineRender(cam, p, xInc, yInc, buffer, settings, samples),
     tbb::auto_partitioner());
 }
+#endif

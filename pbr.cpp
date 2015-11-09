@@ -56,7 +56,7 @@ void Init()
   ballEmit = lumScale * ballEmit;
   Color zero(0, 0, 0);
 
-#define LOAD_MESH 1
+#define LOAD_MESH 0
 
 #if LOAD_MESH
   MeshLoader loader;
@@ -79,7 +79,7 @@ void Init()
   }
 
 #else
-#if 0
+#if 1
   int numBalls = 10;
   for (u32 i = 0; i < numBalls; ++i)
   {
@@ -197,6 +197,26 @@ bool Intersect(const Ray& r, HitRec* hitRec)
   return hit;
 }
 
+//---------------------------------------------------------------------------
+bool IntersectClosest(const Ray& r, HitRec* hitRec)
+{
+  float closest = FLT_MAX;
+  float eps = 0.00001f;
+  for (Geo* obj : objects)
+  {
+    if (obj->Intersect(r, hitRec))
+    {
+      if (hitRec->t < closest && hitRec->t >= eps)
+      {
+        closest = hitRec->t;
+      }
+    }
+  }
+
+  return closest != FLT_MAX;
+}
+
+//---------------------------------------------------------------------------
 static void error_callback(int error, const char* description)
 {
   fprintf(stderr, "Error %d: %s\n", error, description);
@@ -247,9 +267,10 @@ int main(int, char**)
   Camera cam;
   cam.fov = DegToRad(60);
   cam.dist = 1;
-  cam.LookAt(Vector3(5, 5, -100), Vector3(0, 1, 0), Vector3(0, 0, 30));
+  cam.LookAt(Vector3(5, 5, -10), Vector3(0, 1, 0), Vector3(0, 0, 30));
 
   vector<u8> buf(windowSize.x*windowSize.y * 4, 0);
+  RayTrace(cam, backbuffer->buffer);
 
   //  RayTrace(cam);
   ImVec4 clear_color = ImColor(114, 144, 154);
